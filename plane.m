@@ -1,19 +1,23 @@
+pkg load communications
+REAL_OBJECT=csvread("realworld.csv");
 x=rand(1,50);   %take a random X
 y=rand(1,50);   %random Y
 m=0.00001+randn;      %take a random constant
-z=[m*ones(50:50)];  %fill Z with that constant
+z=m*ones(50);  %fill Z with that constant
 %surf(x, y, z)
-for i=1:6
 xsize = numel(x);
-indexx = randperm(xsize);
-zsize = numel(z);
-indexz = randperm(zsize);
+zsize = numel(z(:,1));
+for i=1:6
+indexreal = randi([1, numel(REAL_OBJECT(:,1))], 1, 1);
+indexx = randi([1, xsize], 1, 1);
+%indexx = randperm(xsize);
+indexz =randi([1, zsize], 1, 1);
     p(i,1)= x(indexx(1: 1))/z(indexz(1: 1));    %convert from homogeneous
     p(i,2)=y(indexx(1: 1))/z(indexz(1: 1)); %convert from homogeneous
 %p is the u,v matrix
-X(i)=randn;   %Six points real world
-Y(i)=randn;   %Six points real world
-Z(i)=randn;   %Six points real world
+X(i)=REAL_OBJECT(indexreal,1);
+Y(i)=REAL_OBJECT(indexreal,2);
+Z(i)=REAL_OBJECT(indexreal,3);  %Six points real world
  Noise(i,:)= awgn(p(i,:),randn); %randomnoiseadded to each x&y pair
  %6 random points u,v from my plane & 6 from real world
  if (i>1) 
