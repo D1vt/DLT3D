@@ -107,11 +107,11 @@ Mnorm=V1(:,12);
 errormean=1/12*sum(abs(Mnoise-Mnorm));
 Mnoise=reshape(Mnoise,[],3)';  %Make 3*4 as we want 
 
-%K is well known [a b c
+%K is well known [a 0 c
 %                 0 d e
 %                 0 0 1]
   K(1,1)=input("Give me random a: ")
-  K(1,2)=input("Give me random b: ")
+  K(1,2)=0;  %no skew
   K(1,3)=input("Give me random c: ")
   K(2,2)=input("Give me random d: ")
   K(2,3)=input("Give me random e: ")
