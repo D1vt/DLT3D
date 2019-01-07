@@ -39,7 +39,7 @@ a, b, c = cp
 d = np.dot(cp, p3)
 #now I have a,b,c,d so I can calculate t
 for i in range(6):
-    t=-(a*a*worldpoints[i,0]+b*b*worldpoints[i,1]+c*c*worldpoints[i,2])/(a*a+b*b+c*c)
+     t=-(a*worldpoints[i,0]+b*worldpoints[i,1]+c*worldpoints[i,2]+d)/(a*a+b*b+c*c)
     projectpoints[i,0]=a*t+worldpoints[i,0]
     projectpoints[i,1]=b*t+worldpoints[i,1]
     projectpoints[i,2]=c*t+worldpoints[i,2]
