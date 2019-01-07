@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Jan  5 15:41:33 2019
-
+/
 @author: diana
 """
 
@@ -16,31 +16,44 @@ from random import randrange
 
 #with open('realworld.csv') as csvfile:
  #    readCSV = csv.reader(csvfile, delimiter=' ')
-    #create my random plane
-vec = np.random.randn(6, 3) #6points, 3dimensions
-vec /= np.linalg.norm(vec, axis=0)
-
-realvec=np.random.randn(6,3) 
-#real sixpoints
-
-p=np.full((6, 2), 0.0)
+    
+worldpoints = np.random.randn(6, 3) #6points, 3dimensions, real world points from shpere
+worldpoints /= np.linalg.norm(worldpoints, axis=0)
+imageplane=np.full((6, 2), 0.0)
 Noise=np.full((6, 2), 0.0)
 A=np.full((12, 12), 0.0)
 B =np.full((12, 12), 0.0)
 M_no_noise=np.full((12, 1), 0.0)
 M_noise=np.full((12, 1), 0.0)
+projectpoints=np.full((6, 3), 0.0)
+#find projection
+#1st define random plane
+p1 = np.array([randrange(-9,9), randrange(-9,9), randrange(-9,9)])
+p2 = np.array([randrange(-9,9),randrange(-9,9), randrange(-9,9)])
+p3 = np.array([randrange(-9,9), randrange(-9,9), randrange(-9,9)])
+# These two vectors are in the plane
+v1 = p3 - p1
+v2 = p2 - p1
+cp = np.cross(v1, v2)
+a, b, c = cp
+d = np.dot(cp, p3)
+#now I have a,b,c,d so I can calculate t
 for i in range(6):
-    p[i,0]= vec[i,0] / vec[i,2]#convert from homogeneous
-    p[i,1] = vec[i][1] / vec[i][2]#convert from homogeneous
-    Noise[i,0] = np.random.normal(-10,10)+p[i,0]
-    Noise[i,1]=Noise[i,1]-p[i,0]+p[i,1]
+    t=-(a*a*worldpoints[i,0]+b*b*worldpoints[i,1]+c*c*worldpoints[i,2])/(a*a+b*b+c*c)
+    projectpoints[i,0]=a*t+worldpoints[i,0]
+    projectpoints[i,1]=b*t+worldpoints[i,1]
+    projectpoints[i,2]=c*t+worldpoints[i,2]
+    imageplane[i,0]= projectpoints[i,0] / projectpoints[i,2]#convert from homogeneous
+    imageplane[i,1] = projectpoints[i,1] / projectpoints[i,2]#convert from homogeneous
+    Noise[i,0] = np.random.normal(-10,10)+imageplane[i,0]
+    Noise[i,1]=Noise[i,1]-imageplane[i,0]+imageplane[i,1]
      #randomnoiseadded to each x&y pair
     #6 random points u,v from my plane & 6 from real world
 #Noise=Noise+p
 #here normalize pnorm,normnoise
 
-normp= np.linalg.norm(p)
-pnorm=p/normp
+normp= np.linalg.norm(imageplane)
+pnorm=imageplane/normp
 NN = np.linalg.norm(Noise)
 Norm_Noise =Noise/NN
 l = 0
@@ -49,42 +62,42 @@ for j in range(12):
      for k in range(4):
                             A[j, k] = 0
                             B[j, k] = 0
-     A[j,4] = realvec[l,0]
-     A[j,5] = realvec[l,1]
-     A[j,6] = realvec[l,2]
-     B[j,4] = realvec[l,0]
-     B[j,5] = realvec[l,1]
-     B[j,6] = realvec[l,2]
+     A[j,4] = worldpoints[l,0]
+     A[j,5] = worldpoints[l,1]
+     A[j,6] = worldpoints[l,2]
+     B[j,4] = worldpoints[l,0]
+     B[j,5] = worldpoints[l,1]
+     B[j,6] = worldpoints[l,2]
      A[j,7] = 1
      B[j,7] = 1
-     A[j, 8] = -Norm_Noise[l, 1] * realvec[l,0]
-     A[j, 9] = -Norm_Noise[l, 1] * realvec[l,1]
-     A[j, 10] = -Norm_Noise[l, 1] * realvec[l,2]
+     A[j, 8] = -Norm_Noise[l, 1] * worldpoints[l,0]
+     A[j, 9] = -Norm_Noise[l, 1] * worldpoints[l,1]
+     A[j, 10] = -Norm_Noise[l, 1] * worldpoints[l,2]
      A[j, 11] = -Norm_Noise[l, 1]
-     B[j, 8] = -pnorm[l, 1] * realvec[l,0]
-     B[j, 9] = -pnorm[l, 1] * realvec[l,1]
-     B[j, 10] = -pnorm[l, 1] * realvec[l,2]
+     B[j, 8] = -pnorm[l, 1] * worldpoints[l,0]
+     B[j, 9] = -pnorm[l, 1] * worldpoints[l,1]
+     B[j, 10] = -pnorm[l, 1] * worldpoints[l,2]
      B[j, 11] = -pnorm[l, 1]
      
     else :
         for k in range(4,8):
             A[j, k]= 0
             B[j, k]= 0    
-        A[j,0] = realvec[l,0]
-        A[j,1]= realvec[l,1]
-        A[j,2] = realvec[l,2]
-        B[j,0]=  realvec[l,0]
-        B[j,1] =realvec[l,1]
-        B[j,2]= realvec[l,2]
+        A[j,0] = worldpoints[l,0]
+        A[j,1]= worldpoints[l,1]
+        A[j,2] = worldpoints[l,2]
+        B[j,0]= worldpoints[l,0]
+        B[j,1] =worldpoints[l,1]
+        B[j,2]= worldpoints[l,2]
         A[j,3] = 1
         B[j,3] = 1
-        A[j, 8] = -Norm_Noise[l, 0] * realvec[l,0]
-        A[j, 9] = -Norm_Noise[l, 0] * realvec[l,1]
-        A[j, 10] = -Norm_Noise[l, 0] * realvec[l,2]
+        A[j, 8] = -Norm_Noise[l, 0] * worldpoints[l,0]
+        A[j, 9] = -Norm_Noise[l, 0] * worldpoints[l,1]
+        A[j, 10] = -Norm_Noise[l, 0] * worldpoints[l,2]
         A[j, 11] = -Norm_Noise[l, 0]
-        B[j, 8] = -pnorm[l, 0] * realvec[l,0]
-        B[j, 9] = -pnorm[l, 0] * realvec[l,1]
-        B[j, 10] = -pnorm[l, 0] * realvec[l,2]
+        B[j, 8] = -pnorm[l, 0] * worldpoints[l,0]
+        B[j, 9] = -pnorm[l, 0] * worldpoints[l,1]
+        B[j, 10] = -pnorm[l, 0] * worldpoints[l,2]
         B[j, 11] = -pnorm[l, 0]
         l = l + 1
 
@@ -97,5 +110,16 @@ for final in range(12):
     Sum=Sum+(abs(M_no_noise[final]-M_noise[final]))
 error=float(Sum/12)
 #K is well know (camera calibration)
+# K= [a 0 c
+     #0 d e
+     # 0 0 1]
+#FOR R,T
+#T[2]=M_noise(11)/1  #fTz=m34
+#T[1]=(Mnoise(7)-K(1,2)*T(2))/K(1,1) #%dTy+eTz=m24
+#T[0]=(Mnoise(3)-K(0,2)*T(2))/K(0,0) #aTx+cTz=m14
 
-#Mnoise=reshape(Mnoise,[],3)'
+#for final in range(3):
+ # R[2,i]=Mnoise(i)/1  #fr3i=m3i
+  #R[1,i]=(Mnoise(i+4)- R(2,i)*K(1,2))/K(1,1);  #dr2i+er3i=m2,i
+  #R[0,i]= (Mnoise(i+8)-K(0,2)*R(2,i))/K(0,0); #ar1i+br2i+cr3i=m1i
+
