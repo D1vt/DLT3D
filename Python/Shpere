@@ -5,7 +5,7 @@ Created on Sat Jan  5 15:41:33 2019
 /
 @author: diana
 """
-
+import random
 import numpy as np 
 from random import randrange
 #define a plane to project the points. Range1 = from , Range2=to . 
@@ -21,6 +21,11 @@ def plane(range1,range2):
     return a, b, c, d  #now we have plane a,b,c,d to find t
 
 #use worldpoints to find the imagepoints and the convert to u.v homogeneous
+def spherepoints(points):
+    worldpoints = np.random.randn(3, points)
+    worldpoints /= np.linalg.norm(worldpoints, axis=0)
+    return worldpoints
+
 def projection(planecoord,worldpoints):
     for i in range(6):
 #now I have a,b,c,d so I can calculate t
@@ -34,8 +39,8 @@ def projection(planecoord,worldpoints):
  
 def DLT3D(worldpoints, imagepoints, normalize=False):
     K=np.random.random((3, 3))
-    K[2,2]=1
-    K[0,1]=0
+    K[2,2]=1   #modern camera
+    K[0,1]=0  #no skew
     if (normalize):
         l = 0
         for j in range(12):
@@ -79,8 +84,7 @@ def DLT3D(worldpoints, imagepoints, normalize=False):
         return DLT3D(worldpoints,pnorm, normalize=True)
        
     
-worldpoints = np.random.randn(6, 3) #6points, 3dimensions, real world points from shpere
-worldpoints /= np.linalg.norm(worldpoints, axis=0)
+worldpoints = spherepoints(6)
 imagepoints=np.full((6, 2), 0.0)
 A=np.full((12, 12), 0.0)
 M=np.full((12, 1), 0.0)
@@ -90,7 +94,7 @@ projectpoints=np.full((6, 3), 0.0)
 
 
 #NoNoiseTest
-planecoord=plane(-5, 5)    
+planecoord=plane(random.randint(-50,50), random.randint(-50,50))    
 imagepoints=projection(planecoord,worldpoints)
 T,R=DLT3D(worldpoints, imagepoints)
 
