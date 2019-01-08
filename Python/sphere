@@ -43,9 +43,6 @@ def project(worldpoints,K, Rt, imagePoints, quant_error=False):
             z=P[2,0]*X+P[2,1]*Y+P[2,2]*Z+P[2,3]
             imagePoints[i,0]=x/z
             imagePoints[i,1]=y/z
-            
-        #for i in range(x.shape[1]):
-         # x[:,i] /= x[2,i]
         if(quant_error):
             imagePoints = np.around(imagePoints, decimals=0)
         return imagePoints
@@ -161,8 +158,9 @@ imagepoints_noise=imagePoints+randrange(-100,1000)
 #NoNoiseTest
 T,Rot,H=DLT3D(worldpoints, imagePoints, K)
 cond2=LA.cond(H)
-#NoiseTest
 
+
+#NoiseTest
 Tnoise,Rotnoise,Hnoise=DLT3D(worldpoints, imagepoints_noise, K)
 condnoise=LA.cond(Hnoise)   
 
