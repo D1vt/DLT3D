@@ -38,9 +38,6 @@ def projection(planecoord,worldpoints):
     return imagepoints
  
 def DLT3D(worldpoints, imagepoints, normalize=False):
-    K=np.random.random((3, 3))
-    K[2,2]=1   #modern camera
-    K[0,1]=0  #no skew
     if (normalize):
         l = 0
         for j in range(12):
@@ -83,7 +80,16 @@ def DLT3D(worldpoints, imagepoints, normalize=False):
         pnorm=imagepoints/normp
         return DLT3D(worldpoints,pnorm, normalize=True)
        
-    
+def k_matrix(fx=1 , fy=1, cx=0 , cy=0):
+ fx=random.randrange(0,1)
+ fy=random.randrange(0,1)
+ cx=random.randrange(0,1)
+ cy=random.randrange(0,1)       
+ K= np.mat([[fx, 0, cx],
+            [0,fy,cy],
+            [0,0,1.]], dtype=np.float32) 
+ return K
+
 worldpoints = spherepoints(6)
 imagepoints=np.full((6, 2), 0.0)
 A=np.full((12, 12), 0.0)
