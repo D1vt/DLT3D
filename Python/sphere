@@ -81,8 +81,7 @@ imagePoints = np.array(cam_sim.project(worldpoints, False))
 T,R=DLT3D(worldpoints, imagePoints)
 
 #NoiseTest
-imagepoints=projection(planecoord,worldpoints)
-imagepoints_noise=imagePoints+np.random.normal(-10,10)
+imagePoints_noise=imagePoints+np.random.normal(-10,10)
 Tnoise,Rnoise=DLT3D(worldpoints, imagePoints)
    
     
