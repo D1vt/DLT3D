@@ -163,7 +163,7 @@ imagepoints_noise=imagePoints+np.random.normal(-10,10)
 
 
 #NoNoiseTest
-T,Rot,H=DLT3D(worldpoints, imagePoints, K)
+T,Rot,H=DLT3D(worldpoints, imagePoints, K, True)
 cond2=LA.cond(H)
 #NoiseTest
 
