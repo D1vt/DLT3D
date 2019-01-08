@@ -6,12 +6,10 @@ Created on Sat Jan  5 15:41:33 2019
 @author: diana
 @set_P, set_K, set_R_axisAngle, set_t developed by raultron
 """
-
 import numpy as np 
 from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm
-
 
 
 def set_P(K,Rt):
@@ -30,6 +28,11 @@ def set_K(Rt,fx = 1, fy = 1, cx = 0,cy = 0):
                       [0,0,1.]], dtype=np.float32)
         return K
 
+def normalize(imagePoints):
+    normp= np.linalg.norm(imagePoints)
+    imagePoints=imagePoints/normp
+    return imagePoints
+
 def project(worldpoints,K, Rt, imagePoints, quant_error=False):
         """  Project points in X (6*n array) and normalize coordinates. """
         
@@ -43,6 +46,9 @@ def project(worldpoints,K, Rt, imagePoints, quant_error=False):
             z=P[2,0]*X+P[2,1]*Y+P[2,2]*Z+P[2,3]
             imagePoints[i,0]=x/z
             imagePoints[i,1]=y/z
+            
+        #for i in range(x.shape[1]):
+         # x[:,i] /= x[2,i]
         if(quant_error):
             imagePoints = np.around(imagePoints, decimals=0)
         return imagePoints
@@ -152,15 +158,15 @@ R=set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 t=set_t(0.0,-0.0,0.5, frame='world')
 Rt=R*t
 imagePoints = project(worldpoints,K, Rt,imagePoints, False)
-imagepoints_noise=imagePoints+randrange(-100,1000)
+imagePoints=normalize(imagePoints)
+imagepoints_noise=imagePoints+np.random.normal(-10,10)
 
 
 #NoNoiseTest
 T,Rot,H=DLT3D(worldpoints, imagePoints, K)
 cond2=LA.cond(H)
-
-
 #NoiseTest
+
 Tnoise,Rotnoise,Hnoise=DLT3D(worldpoints, imagepoints_noise, K)
 condnoise=LA.cond(Hnoise)   
 
