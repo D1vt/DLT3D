@@ -20,12 +20,13 @@ def plane(range1,range2):
     d = np.dot(cp, p3)
     return a, b, c, d  #now we have plane a,b,c,d to find t
 
-#use worldpoints to find the imagepoints and the convert to u.v homogeneous
+#use worldpoints from sphere
 def spherepoints(points):
     worldpoints = np.random.randn(3, points)
     worldpoints /= np.linalg.norm(worldpoints, axis=0)
     return worldpoints
 
+#project the points to a plane (need to be fixed
 def projection(planecoord,worldpoints):
     for i in range(6):
 #now I have a,b,c,d so I can calculate t
@@ -36,7 +37,7 @@ def projection(planecoord,worldpoints):
      imagepoints[i,0]= projectpoints[i,0] / projectpoints[i,2]#convert to u homogeneous
      imagepoints[i,1] = projectpoints[i,1] / projectpoints[i,2]#convert to v homogeneous
     return imagepoints
- 
+#DLT3D algorithm (2 cases normalize=False or = True 
 def DLT3D(worldpoints, imagepoints, normalize=False):
     if (normalize):
         l = 0
@@ -79,8 +80,8 @@ def DLT3D(worldpoints, imagepoints, normalize=False):
         normp= np.linalg.norm(imagepoints)
         pnorm=imagepoints/normp
         return DLT3D(worldpoints,pnorm, normalize=True)
-       
-def k_matrix(fx=1 , fy=1, cx=0 , cy=0):
+ #function for the K matrix using random fx,cx,fy,cy    
+def k_matrix():
  fx=random.randrange(0,1)
  fy=random.randrange(0,1)
  cx=random.randrange(0,1)
