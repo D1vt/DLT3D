@@ -5,20 +5,11 @@ Created on Sat Jan  5 15:41:33 2019
 /
 @author: diana
 """
+from vision.camera import Camera
 import random
 import numpy as np 
 from random import randrange
-#define a plane to project the points. Range1 = from , Range2=to . 
-def plane(range1,range2):
-    p1 = np.array([randrange(range1,range2), randrange(range1,range2), randrange(range1,range2)])
-    p2 = np.array([randrange(range1,range2),randrange(range1,range2), randrange(range1,range2)])
-    p3 = np.array([randrange(range1,range2), randrange(range1,range2), randrange(range1,range2)])
-    v1 = p3 - p1
-    v2 = p2 - p1
-    cp = np.cross(v1, v2)
-    a, b, c = cp
-    d = np.dot(cp, p3)
-    return a, b, c, d  #now we have plane a,b,c,d to find t
+ 
 
 #use worldpoints from sphere
 def spherepoints(points):
@@ -26,17 +17,6 @@ def spherepoints(points):
     worldpoints /= np.linalg.norm(worldpoints, axis=0)
     return worldpoints
 
-#project the points to a plane (need to be fixed
-def projection(planecoord,worldpoints):
-    for i in range(6):
-#now I have a,b,c,d so I can calculate t
-     t=-(planecoord[0]*worldpoints[i,0]+planecoord[1]*worldpoints[i,1]+planecoord[2]*worldpoints[i,2]+planecoord[3])/(planecoord[0]**2+planecoord[1]**2+planecoord[2]**2)
-     projectpoints[i,0]=planecoord[0]*t+worldpoints[i,0]
-     projectpoints[i,1]=planecoord[1]*t+worldpoints[i,1]
-     projectpoints[i,2]=planecoord[2]*t+worldpoints[i,2]
-     imagepoints[i,0]= projectpoints[i,0] / projectpoints[i,2]#convert to u homogeneous
-     imagepoints[i,1] = projectpoints[i,1] / projectpoints[i,2]#convert to v homogeneous
-    return imagepoints
 #DLT3D algorithm (2 cases normalize=False or = True 
 def DLT3D(worldpoints, imagepoints, normalize=False):
     if (normalize):
@@ -78,18 +58,9 @@ def DLT3D(worldpoints, imagepoints, normalize=False):
         return T,R       
     else:
         normp= np.linalg.norm(imagepoints)
-        pnorm=imagepoints/normp
-        return DLT3D(worldpoints,pnorm, normalize=True)
+        normp=imagepoints/normp
+        return DLT3D(worldpoints,normp, normalize=True)
  #function for the K matrix using random fx,cx,fy,cy    
-def k_matrix():
- fx=random.randrange(0,1)
- fy=random.randrange(0,1)
- cx=random.randrange(0,1)
- cy=random.randrange(0,1)       
- K= np.mat([[fx, 0, cx],
-            [0,fy,cy],
-            [0,0,1.]], dtype=np.float32) 
- return K
 
 worldpoints = spherepoints(6)
 imagepoints=np.full((6, 2), 0.0)
@@ -97,18 +68,22 @@ A=np.full((12, 12), 0.0)
 M=np.full((12, 1), 0.0)
 T=np.full((3), 0.0)
 R=np.full((3,3), 0.0)
-projectpoints=np.full((6, 3), 0.0)
 
+## CREATE A SIMULATED CAMERA
+cam_sim = Camera()
+cam_sim.set_K(fx = 600,fy = 600,cx = 360,cy = 640)
+cam_sim.set_width_heigth(960,960)
+cam_sim.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
+cam_sim.set_t(0.0,-0.0,0.5, frame='world')
+imagePoints = np.array(cam_sim.project(worldpoints, False))
 
 #NoNoiseTest
-planecoord=plane(random.randint(-50,50), random.randint(-50,50))    
-imagepoints=projection(planecoord,worldpoints)
-T,R=DLT3D(worldpoints, imagepoints)
+T,R=DLT3D(worldpoints, imagePoints)
 
 #NoiseTest
 imagepoints=projection(planecoord,worldpoints)
-imagepoints_noise=imagepoints+np.random.normal(-10,10)
-Tnoise,Rnoise=DLT3D(worldpoints, imagepoints)
+imagepoints_noise=imagePoints+np.random.normal(-10,10)
+Tnoise,Rnoise=DLT3D(worldpoints, imagePoints)
    
     
 
