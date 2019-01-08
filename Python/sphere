@@ -51,12 +51,7 @@ def project(worldpoints,K, Rt, imagePoints, quant_error=False):
          # x[:,i] /= x[2,i]
         if(quant_error):
             imagePoints = np.around(imagePoints, decimals=0)
-        return imagePoints
-    
-def set_width_heigth(width, heigth):
-        img_width = width
-        img_height = heigth
-        return(img_width,img_height)
+        return imagePoints    
 
 def set_R_axisAngle(x,y,z, alpha):
         """  Creates a 3D [R|t] matrix for rotation
@@ -87,7 +82,7 @@ def spherepoints(points):
     return worldpoints
 
  
-def DLT3D(worldpoints, imagepoints, K, normalize=False):
+def DLT3D(worldpoints, imagepoints, K, normalization=False):
     if (normalize):
         l = 0
         for j in range(12):
@@ -131,7 +126,7 @@ def DLT3D(worldpoints, imagepoints, K, normalize=False):
         return T,Rot,H       
     else:
         pnorm=normalize(imagepoints)
-        return DLT3D(worldpoints,pnorm, K, normalize=True)
+        return DLT3D(worldpoints,pnorm, K, True)
 
 
 #values
@@ -142,17 +137,14 @@ t = np.eye(4, dtype=np.float32) # translation
 Rt = np.eye(4, dtype=np.float32)
 worldpoints = spherepoints(6)
 H= np.full((3,4),0.0)
-Hnoise= np.full((3,4),0.0)
-Rotnoise=np.full((3,3), 0.0)
-Tnoise=np.full((3,1), 0.0)
 A=np.full((12, 12), 0.0)
 M=np.full((12, 1), 0.0)
 imagePoints=np.full((6,2),0.0)
 T=np.full((3,1), 0.0)
 Rot=np.full((3,3), 0.0)
+
 K=set_K(Rt,fx = 600, fy = 600, cx = 360, cy = 640)
 P=set_P(K,Rt)
-wid,hei=set_width_heigth(960,960)
 R=set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 t=set_t(0.0,-0.0,0.5, frame='world')
 Rt=R*t
@@ -166,8 +158,8 @@ T,Rot,H=DLT3D(worldpoints, imagePoints, K, True)
 cond2=LA.cond(H)
 #NoiseTest
 
-Tnoise,Rotnoise,Hnoise=DLT3D(worldpoints, imagepoints_noise, K)
-condnoise=LA.cond(Hnoise)   
+T,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
+condnoise=LA.cond(H)   
 
  
 
