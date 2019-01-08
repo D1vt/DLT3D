@@ -34,7 +34,7 @@ def normalize(imagePoints):
     return imagePoints
 
 def project(worldpoints,K, Rt, imagePoints, quant_error=False):
-        """  Project points in X (6*n array) and normalize coordinates. """
+        """  Project points in X (6*n array) & convert to homogeneous"""
         
         P=set_P(K,Rt)
         for i in range(6):
@@ -130,8 +130,7 @@ def DLT3D(worldpoints, imagepoints, K, normalize=False):
           Rot[0,i]= (M[i]-K[0,2]*Rot[2,i]-K[0,1]*Rot[1,i])/K[0,0]; #ar1i+br2i+cr3i=m1i
         return T,Rot,H       
     else:
-        normp= np.linalg.norm(imagepoints)
-        pnorm=imagepoints/normp
+        pnorm=normalize(imagepoints)
         return DLT3D(worldpoints,pnorm, K, normalize=True)
 
 
