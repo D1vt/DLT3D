@@ -10,7 +10,7 @@ import numpy as np
 from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm
-
+import math
 
 def set_P(K,Rt):
         # P = K[R|t]
@@ -81,7 +81,18 @@ def spherepoints(points):
     worldpoints /= np.linalg.norm(worldpoints, axis=0)
     return worldpoints
 
- 
+
+    
+def set_T_Rt(trans,R):
+    B=np.full((3, 3), 0.0)
+    for i in range(3):
+        B[i,1]=R[i,0]
+        B[i,1]=R[i,1]
+        B[i,2]=R[i,2]
+        B[i,3]=trans[i]
+    B[3,3]=1
+    return B            
+
 def DLT3D(worldpoints, imagepoints, K, normalization=False):
     if (normalize):
         l = 0
@@ -112,23 +123,28 @@ def DLT3D(worldpoints, imagepoints, K, normalization=False):
         U, s, V = np.linalg.svd(A, full_matrices=True)
         for v in range(12):
            M[v]=V[v,11]
-        T[2]=M[11]/K[2,2]
-        T[1]=(M[7]-K[1,2]*T[2])/K[1,1] 
-        T[0]=(M[3]-K[0,1]*T[1]-K[0,2]*T[2])/K[0,0]
+        trans[2]=M[11]/K[2,2]
+        trans[1]=(M[7]-K[1,2]*trans[2])/K[1,1] 
+        trans[0]=(M[3]-K[0,1]*trans[1]-K[0,2]*trans[2])/K[0,0]
         for j in range(4):
             H[0,j]=M[j]
             H[1,j]=M[j+4]
-            H[2,j]=M[j+8]   
+            H[2,j]=M[j+8]              
         for i in range(3):
           Rot[2,i]=M[i+8]/K[2,2]  #fr3i=m3i
           Rot[1,i]=(M[i+4]- Rot[2,i]*K[1,2])/K[1,1];  #dr2i+er3i=m2,i
           Rot[0,i]= (M[i]-K[0,2]*Rot[2,i]-K[0,1]*Rot[1,i])/K[0,0]; #ar1i+br2i+cr3i=m1i
-        return T,Rot,H       
+        return trans,Rot,H       
     else:
         pnorm=normalize(imagepoints)
         return DLT3D(worldpoints,pnorm, K, True)
 
-
+#def spherical_coord():
+   #x=rsinθcosφ
+   #y=rsinθsinφ
+   #z=rcosθ
+   #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
+        
 #values
 P = np.eye(3,4)
 K = np.eye(3, dtype=np.float32) # calibration matrix
@@ -140,29 +156,29 @@ H= np.full((3,4),0.0)
 A=np.full((12, 12), 0.0)
 M=np.full((12, 1), 0.0)
 imagePoints=np.full((6,2),0.0)
-T=np.full((3,1), 0.0)
+trans=np.full((3,1), 0.0)
 Rot=np.full((3,3), 0.0)
-
-K=set_K(Rt,fx = 600, fy = 600, cx = 360, cy = 640)
+K=set_K(Rt,fx = 600, fy = 600, cx = 320, cy = 240)
 P=set_P(K,Rt)
 R=set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 t=set_t(0.0,-0.0,0.5, frame='world')
 Rt=R*t
 imagePoints = project(worldpoints,K, Rt,imagePoints, False)
 imagePoints=normalize(imagePoints)
-imagepoints_noise=imagePoints+np.random.normal(-10,10)
+imagepoints_noise=imagePoints+np.random.normal(0,1)
 
 
 #NoNoiseTest
-T,Rot,H=DLT3D(worldpoints, imagePoints, K, True)
+trans,Rot,H=DLT3D(worldpoints, imagePoints, K, True)
 cond2=LA.cond(H)
+#cov2=np.cov(H)
 #NoiseTest
 
-T,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
+trans,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
 condnoise=LA.cond(H)   
-
+#covnoise=np.cov(H)
  
-
+#p=spherical_coord(Rot)
 
     
 
