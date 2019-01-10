@@ -11,6 +11,7 @@ from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
+import algopy
 import numdifftools as nd
 
 def set_P(K,Rt):
@@ -180,8 +181,8 @@ def a_b_c_from_Euler(Rot,Rt):
 def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     #xyz_sphere=xyz_sphere(a,b,r)
     a,b,c=a_b_c_from_Euler(Rot,Rt)
-    Jac=jacobian_matrix(a,b,c,K,worldpoints)
-    print Jac
+    Jac,JacT=jacobian_matrix(a,b,c,K,worldpoints)
+    
     mean = 0.0
     scale = 4.0 
     size = 10000
@@ -206,7 +207,6 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     #imagePoints=add_noise(imagePoints)
     #imagePoints=normalize(imagePoints)
     cov_mat_p1 = np.cov(px1,py1)
-    print cov_mat_p1
     cov_mat_p2 = np.cov(px2,py2)
     cov_mat_p3 = np.cov(px3,py3)
     cov_mat_p4 = np.cov(px4,py4)
@@ -222,16 +222,16 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), cov_mat_p5, np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
     image6points=np.diag(np.diag( image6points))
-    #cov_matrix=np.dot(np.transpose(Jac),inv(image6points))
-    #cov_matrix= inv(np.dot(np.dot(np.transpose(Jac), inv(image6points)), Jac))
-    return image6points #cov_matrix
+    image6points=inv(image6points)
+    #cov_matrix=inv(np.dot(np.dot(JacT, inv(image6points)), Jac))
+    return image6points
 
 def R_Euler(a,b,c):
     R_Euler= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
                        [math.cos(c)*math.sin(a)+math.cos(a)*math.cos(b)*math.sin(c), math.cos(a)*math.cos(b)*math.cos(c)-math.sin(a)*math.sin(c), -math.cos(a)*math.sin(b)],
                        [math.sin(b)*math.sin(c), math.cos(c)*math.sin(b), math.cos(b)]])
     return R_Euler
-def p_nonlinear(a,b,c,K,X):
+def point_p(a,b,c,K,X):
     R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                           [math.sin(b)*math.cos(a), math.cos(b), math.cos(b)*math.sin(a)],
                           [-math.sin(a), 0, math.cos(a)]])
@@ -248,10 +248,10 @@ def p_nonlinear(a,b,c,K,X):
                 [X[2]],
                 [1]])
     image_point = np.dot(P,Y)
-    p=np.full((1,2),0.0)
-    p[0,0] = image_point[0]/image_point[2]
-    p[0,1] = image_point[1]/image_point[2]
-    return p
+    
+    u= image_point[0]/image_point[2]
+    v= image_point[1]/image_point[2]
+    return np.array([u,v])
     
 
 
@@ -261,14 +261,20 @@ def get_world_position(Rt):
 
 
 def jacobian_matrix(a,b,c,K,worldpoints):
-     point1=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[0, :]))
-     point2=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[1, :]))
-     point3=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[2, :]))
-     point4=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[3, :]))
-     point5=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[4, :]))
-     point6=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[5, :]))
-     Jac=np.vstack((point1,point2,point3,point4,point5,point6))
-     return Jac 
+     
+     Jacob_matrix = nd.Jacobian(point_p) 
+     point1=Jacob_matrix(a,b,c, K, worldpoints[0, :])
+     point2=Jacob_matrix(a,b,c, K, worldpoints[1, :])
+     point3=Jacob_matrix(a,b,c, K, worldpoints[2, :])
+     point4=Jacob_matrix(a,b,c, K, worldpoints[3, :])
+     point5=Jacob_matrix(a,b,c, K, worldpoints[4, :])
+     point6=Jacob_matrix(a,b,c, K, worldpoints[5, :])
+     JacT=np.array([point1[0,0],point1[0,1],point2[0,0],point2[0,1],point3[0,0],point3[0,1],point4[0,0],point4[0,1],point5[0,0],point5[0,1],point6[0,0],point6[0,1]])
+     Jac=np.array([[point1[0,0]],[point1[0,1]],[point2[0,0]],[point2[0,1]],[point3[0,0]],[point3[0,1]],[point4[0,0]],[point4[0,1]],[point5[0,0]],[point5[0,1]],[point6[0,0]],[point6[0,1]]])
+     
+     print Jac
+     print JacT
+     return Jac,JacT
       
     
    #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
