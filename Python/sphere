@@ -9,7 +9,7 @@ Created on Sat Jan  5 15:41:33 2019
 import numpy as np 
 from random import randrange
 from numpy import linalg as LA
-from scipy.linalg import expm
+from scipy.linalg import expm, inv
 import math
 
 def set_P(K,Rt):
@@ -19,24 +19,22 @@ def set_P(K,Rt):
         P = np.dot(K,Rt[:3,:4])
         return P
     
-def set_K(Rt,fx = 1, fy = 1, cx = 0,cy = 0):
+def set_K( Rt, fx = 1, fy = 1, cx = 0,cy = 0):
         # K is the 3x3 Camera matrix
         # fx, fy are focal lenghts expressed in pixel units
         # cx, cy is a principal point usually at image center
         K = np.mat([[fx, 0, cx],
                       [0,fy,cy],
                       [0,0,1.]], dtype=np.float32)
-        return K
+        P=set_P(K,Rt)    
+        return K,P
 
-def normalize(imagePoints):
-    normp= np.linalg.norm(imagePoints)
-    imagePoints=imagePoints/normp
-    return imagePoints
 
-def project(worldpoints,K, Rt, imagePoints, quant_error=False):
+
+def project(worldpoints, P, imagePoints, quant_error=False):
         """  Project points in X (6*n array) & convert to homogeneous"""
         
-        P=set_P(K,Rt)
+        
         for i in range(6):
             X=worldpoints[i,0]
             Y=worldpoints[i,1]
@@ -53,7 +51,7 @@ def project(worldpoints,K, Rt, imagePoints, quant_error=False):
             imagePoints = np.around(imagePoints, decimals=0)
         return imagePoints    
 
-def set_R_axisAngle(x,y,z, alpha):
+def set_R_axisAngle(x,y,z, alpha,K,t):
         """  Creates a 3D [R|t] matrix for rotation
         around the axis of the vector defined by (x,y,z)
         and an alpha angle."""
@@ -63,9 +61,11 @@ def set_R_axisAngle(x,y,z, alpha):
         a_skew = np.mat([[0,-a[2],a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
         R = np.eye(4)
         R[:3,:3] = expm(a_skew*alpha)
-        return R
+        Rt=update_Rt(R,t)
+        P=set_P(K,Rt)
+        return R,P
   
-def set_t(x,y,z, frame = 'camera'):
+def set_t(x,y,z,K,R, frame = 'camera'):
         #self.t = array([[x],[y],[z]])
         t = np.eye(4)
         if frame=='world':
@@ -74,15 +74,14 @@ def set_t(x,y,z, frame = 'camera'):
           t[:3,3] = cam_t[:3]
         else:
           t[:3,3] = np.array([x,y,z])
-        return t
+        Rt=update_Rt(R,t)
+        P=set_P(K,Rt)
+        return t,P
 
-def spherepoints(points):
-    worldpoints = np.random.randn(points, 3)
-    worldpoints /= np.linalg.norm(worldpoints, axis=0)
-    return worldpoints
+def update_Rt(R,t):
+    Rt=np.dot(R,t)
+    return Rt
 
-
-    
 def set_T_Rt(trans,R):
     B=np.full((3, 3), 0.0)
     for i in range(3):
@@ -91,9 +90,21 @@ def set_T_Rt(trans,R):
         B[i,2]=R[i,2]
         B[i,3]=trans[i]
     B[3,3]=1
-    return B            
+    return B 
+
+def spherepoints(points):
+    worldpoints = np.random.randn(points, 3)
+    worldpoints /= np.linalg.norm(worldpoints, axis=0)
+    return worldpoints
+
+def normalize(imagePoints):
+    normp= np.linalg.norm(imagePoints)
+    imagePoints=imagePoints/normp
+    return imagePoints               
 
 def DLT3D(worldpoints, imagepoints, K, normalization=False):
+    A=np.full((12, 12), 0.0)
+    M=np.full((12, 1), 0.0)
     if (normalize):
         l = 0
         for j in range(12):
@@ -124,7 +135,7 @@ def DLT3D(worldpoints, imagepoints, K, normalization=False):
         for v in range(12):
            M[v]=V[v,11]
         trans[2]=M[11]/K[2,2]
-        trans[1]=(M[7]-K[1,2]*trans[2])/K[1,1] 
+        trans[1]=(M[7]-K[1,2]*trans[2])/K[1,1]
         trans[0]=(M[3]-K[0,1]*trans[1]-K[0,2]*trans[2])/K[0,0]
         for j in range(4):
             H[0,j]=M[j]
@@ -138,48 +149,40 @@ def DLT3D(worldpoints, imagepoints, K, normalization=False):
     else:
         pnorm=normalize(imagepoints)
         return DLT3D(worldpoints,pnorm, K, True)
+    
+    
+def add_noise(imagePoints,sd,mean):
+    gauss_noise= np.random.normal(mean,sd)
+    imagePoints=imagePoints+gauss_noise
+    return imagePoints           
 
-#def spherical_coord():
-   #x=rsinθcosφ
-   #y=rsinθsinφ
-   #z=rcosθ
-   #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
-        
 #values
 P = np.eye(3,4)
-K = np.eye(3, dtype=np.float32) # calibration matrix
 R = np.eye(4, dtype=np.float32) # rotatio
 t = np.eye(4, dtype=np.float32) # translation
 Rt = np.eye(4, dtype=np.float32)
+
+K,P=set_K(Rt,fx = 600, fy = 600, cx = 320, cy = 240)
+R,P=set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0),K,t)
+t,P=set_t(0.0,-0.0,0.5,K,R, frame='world')
+
+
 worldpoints = spherepoints(6)
-H= np.full((3,4),0.0)
-A=np.full((12, 12), 0.0)
-M=np.full((12, 1), 0.0)
 imagePoints=np.full((6,2),0.0)
+imagePoints = project(worldpoints,P,imagePoints, False)
+imagePoints=normalize(imagePoints)
+imagepoints_noise=add_noise(imagePoints,2,0)
+
+
+
+H= np.full((3,4),0.0)
 trans=np.full((3,1), 0.0)
 Rot=np.full((3,3), 0.0)
-K=set_K(Rt,fx = 600, fy = 600, cx = 320, cy = 240)
-P=set_P(K,Rt)
-R=set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
-t=set_t(0.0,-0.0,0.5, frame='world')
-Rt=R*t
-imagePoints = project(worldpoints,K, Rt,imagePoints, False)
-imagePoints=normalize(imagePoints)
-imagepoints_noise=imagePoints+np.random.normal(0,1)
-
 
 #NoNoiseTest
 trans,Rot,H=DLT3D(worldpoints, imagePoints, K, True)
 cond2=LA.cond(H)
-#cov2=np.cov(H)
+
 #NoiseTest
-
 trans,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
-condnoise=LA.cond(H)   
-#covnoise=np.cov(H)
- 
-#p=spherical_coord(Rot)
-
-    
-
-
+condnoise=LA.cond(H)  
