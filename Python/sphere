@@ -223,7 +223,10 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
     image6points=np.diag(np.diag( image6points))
     image6points=inv(image6points)
-    #cov_matrix=inv(np.dot(np.dot(JacT, inv(image6points)), Jac))
+    covstart=np.dot(JacT,image6points)
+    print covstart
+    covafter=np.dot(covstart,Jac)
+    print covafter
     return image6points
 
 def R_Euler(a,b,c):
@@ -261,9 +264,10 @@ def get_world_position(Rt):
 
 
 def jacobian_matrix(a,b,c,K,worldpoints):
-     
+     #o jacobian prepei na vgei 3*12
      Jacob_matrix = nd.Jacobian(point_p) 
      point1=Jacob_matrix(a,b,c, K, worldpoints[0, :])
+
      point2=Jacob_matrix(a,b,c, K, worldpoints[1, :])
      point3=Jacob_matrix(a,b,c, K, worldpoints[2, :])
      point4=Jacob_matrix(a,b,c, K, worldpoints[3, :])
@@ -271,7 +275,6 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      point6=Jacob_matrix(a,b,c, K, worldpoints[5, :])
      JacT=np.array([point1[0,0],point1[0,1],point2[0,0],point2[0,1],point3[0,0],point3[0,1],point4[0,0],point4[0,1],point5[0,0],point5[0,1],point6[0,0],point6[0,1]])
      Jac=np.array([[point1[0,0]],[point1[0,1]],[point2[0,0]],[point2[0,1]],[point3[0,0]],[point3[0,1]],[point4[0,0]],[point4[0,1]],[point5[0,0]],[point5[0,1]],[point6[0,0]],[point6[0,1]]])
-     
      print Jac
      print JacT
      return Jac,JacT
