@@ -11,6 +11,7 @@ from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
+import numdifftools as nd
 
 def set_P(K,Rt):
         # P = K[R|t]
@@ -81,11 +82,11 @@ def set_t(x,y,z,K,R, frame = 'camera'):
 def update_Rt(R,t):
     Rt=np.dot(R,t)
     return Rt
-
-def set_T_Rt(trans,R):
-    B=np.full((3, 3), 0.0)
+#Create T=[R|t]
+def set_afterDLT_Rt(trans,R):
+    B=np.full((4, 4), 0.0)
     for i in range(3):
-        B[i,1]=R[i,0]
+        B[i,0]=R[i,0]
         B[i,1]=R[i,1]
         B[i,2]=R[i,2]
         B[i,3]=trans[i]
@@ -151,11 +152,127 @@ def DLT3D(worldpoints, imagepoints, K, normalization=False):
         return DLT3D(worldpoints,pnorm, K, True)
     
     
-def add_noise(imagePoints,sd,mean):
+def add_noise(imagePoints,sd=4,mean=0):
     gauss_noise= np.random.normal(mean,sd)
     imagePoints=imagePoints+gauss_noise
     return imagePoints           
+    
+    
+   ### here we solve the problem using shperical coordinates and Euler angles
+def xyz_in_spherical_coord(a,b,r):
+   xyz_sphere=np.array([[r*math.sin(a)*math.cos(b)],
+                         [r*math.sin(b)*math.sin(a)],
+                         [r*math.cos(a)]])
+   return xyz_sphere
 
+def a_b_c_from_Euler(Rot,Rt):
+    world_position = get_world_position(Rt)  #[x,y,z,1]
+    x = world_position[0]
+    y = world_position[1]
+    z = world_position[2]
+    r = np.sqrt(x * x + y * y + z * z,dtype=np.float32)
+    if r ==0:
+        a = np.deg2rad(0.0)
+    else:
+        a = math.acos(z / r)
+    if x == 0:
+        b = np.deg2rad(90.0)
+    else:
+       b = math.atan(y / x)
+    return a,b,r
+
+def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
+    #xyz_sphere=xyz_sphere(a,b,r)
+    a,b,c=a_b_c_from_Euler(Rot,Rt)
+    Jac=jacobian_matrix(a,b,c,worldpoints)
+    mean = 0.0
+    scale = 4.0 
+    size = 10000
+    px1 = np.random.normal(mean, scale, size) + imagePoints[0, 0]
+    py1 = np.random.normal(mean, scale, size) + imagePoints[0, 1]
+    # Point 2
+    px2 = np.random.normal(mean, scale, size) + imagePoints[1, 0]
+    py2 = np.random.normal(mean, scale, size) + imagePoints[1, 1]
+    # Point 3
+    px3 = np.random.normal(mean, scale, size) + imagePoints[2, 0]
+    py3 = np.random.normal(mean, scale, size) + imagePoints[2, 1]
+    # Point 4
+    px4 = np.random.normal(mean, scale, size) + imagePoints[3, 0]
+    py4 = np.random.normal(mean, scale, size) + imagePoints[3, 1]
+    # Point 5
+    px5 = np.random.normal(mean, scale, size) + imagePoints[4, 0]
+    py5 = np.random.normal(mean, scale, size) + imagePoints[4, 1]
+    # Point 6
+    px6 = np.random.normal(mean, scale, size) + imagePoints[5, 0]
+    py6 = np.random.normal(mean, scale, size) + imagePoints[5, 1]
+    
+    #imagePoints=add_noise(imagePoints)
+    #imagePoints=normalize(imagePoints)
+    cov_mat_p1 = np.cov(px1,py1)
+    print cov_mat_p1
+    cov_mat_p2 = np.cov(px2,py2)
+    cov_mat_p3 = np.cov(px3,py3)
+    cov_mat_p4 = np.cov(px4,py4)
+    cov_mat_p5 = np.cov(px5,py5)
+    cov_mat_p6 = np.cov(px6,py6)
+    image6points = np.block([[cov_mat_p1, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
+                                       [np.zeros((2, 2)), cov_mat_p2, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
+                                       [np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p3, np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2))],
+                                       [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),cov_mat_p4, np.zeros((2, 2)), np.zeros((2, 2))],
+                                       [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), cov_mat_p5, np.zeros((2, 2))],
+                                       [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
+    image6points=np.diag(np.diag( image6points))
+    print image6points
+    #cov_matrix= inv(np.dot(np.dot(np.transpose(Jac), inv(image6points)), Jac))
+    return image6points# cov_matrix
+
+def R_Euler(a,b,c):
+    R_Euler= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
+                       [math.cos(c)*math.sin(a)+math.cos(a)*math.cos(b)*math.sin(c), math.cos(a)*math.cos(b)*math.cos(c)-math.sin(a)*math.sin(c), -math.cos(a)*math.sin(b)],
+                       [math.sin(b)*math.sin(c), math.cos(c)*math.sin(b), math.cos(b)]])
+    return R_Euler
+def p_nonlinear(a,b,c,K,X):
+    R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
+                          [math.sin(b)*math.cos(a), math.cos(b), math.cos(b)*math.sin(a)],
+                          [-math.sin(a), 0, math.cos(a)]])
+    R_Eu= R_Euler(0.0,np.deg2rad(180.0),0.0)
+    R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3]) 
+    t_Sphere= np.array([[c*math.sin(a)*math.cos(b)],
+               [c*math.sin(b)*math.sin(a)],
+               [c*math.cos(a)]])
+    t_Sphere=np.dot(R_Sphere, -t_Sphere)
+    Rt_Sphere=np.hstack((R_Sphere, t_Sphere))
+    P=np.dot(K,Rt_Sphere)
+    Y=np.array([[X[0]],
+                [X[1]],
+                [X[2]],
+                [1]])
+    image_point = np.dot(P,Y)
+    p=np.full((1,2),0.0)
+    p[0,0] = image_point[0]/image_point[2]
+    p[0,1] = image_point[1]/image_point[2]
+    return p
+    
+
+
+def get_world_position(Rt):
+        w_pos = np.dot(inv(Rt), np.array([0,0,0,1]))
+        return w_pos
+
+
+def jacobian_matrix(a,b,c,worldpoints):
+     point1=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[0, :]))
+     point2=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[1, :]))
+     point3=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[2, :]))
+     point4=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[3, :]))
+     point5=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[4, :]))
+     point6=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[5, :]))
+     Jac=nd.Jacobian((point1,point2,point3,point4,point5,point6))
+     return Jac 
+      
+    
+   #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
+        
 #values
 P = np.eye(3,4)
 R = np.eye(4, dtype=np.float32) # rotatio
@@ -168,6 +285,14 @@ t,P=set_t(0.0,-0.0,0.5,K,R, frame='world')
 
 
 worldpoints = spherepoints(6)
+#testpoints
+#worldpoints = np.array([[-0.206674, 0.240009,-0.29203],
+#                        [0.091502,-0.144823,	0.0323819],
+ #                       [0.371293,	-0.458251	,0.269246],
+  #                      [-0.864962	,0.222202	,0.0354375],
+   #                     [-0.211795	,0.418585	,0.491078],
+    #                    [-0.134308	,0.69774,	-0.773798]])
+
 imagePoints=np.full((6,2),0.0)
 imagePoints = project(worldpoints,P,imagePoints, False)
 imagePoints=normalize(imagePoints)
@@ -185,4 +310,11 @@ cond2=LA.cond(H)
 
 #NoiseTest
 trans,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
-condnoise=LA.cond(H)  
+condnoise=LA.cond(H)   
+#covnoise=np.cov(H)
+ 
+#Rt=set_afterDLT_Rt(trans,Rot)
+
+covmatrix=covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints)
+    
+
