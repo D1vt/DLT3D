@@ -159,11 +159,7 @@ def add_noise(imagePoints,sd=4,mean=0):
     
     
    ### here we solve the problem using shperical coordinates and Euler angles
-def xyz_in_spherical_coord(a,b,r):
-   xyz_sphere=np.array([[r*math.sin(a)*math.cos(b)],
-                         [r*math.sin(b)*math.sin(a)],
-                         [r*math.cos(a)]])
-   return xyz_sphere
+
 
 def a_b_c_from_Euler(Rot,Rt):
     world_position = get_world_position(Rt)  #[x,y,z,1]
@@ -184,7 +180,8 @@ def a_b_c_from_Euler(Rot,Rt):
 def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     #xyz_sphere=xyz_sphere(a,b,r)
     a,b,c=a_b_c_from_Euler(Rot,Rt)
-    Jac=jacobian_matrix(a,b,c,worldpoints)
+    Jac=jacobian_matrix(a,b,c,K,worldpoints)
+    print Jac
     mean = 0.0
     scale = 4.0 
     size = 10000
@@ -215,16 +212,19 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     cov_mat_p4 = np.cov(px4,py4)
     cov_mat_p5 = np.cov(px5,py5)
     cov_mat_p6 = np.cov(px6,py6)
+    
+    
+    
     image6points = np.block([[cov_mat_p1, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
-                                       [np.zeros((2, 2)), cov_mat_p2, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
+                                      [np.zeros((2, 2)), cov_mat_p2, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p3, np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),cov_mat_p4, np.zeros((2, 2)), np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), cov_mat_p5, np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
     image6points=np.diag(np.diag( image6points))
-    print image6points
+    #cov_matrix=np.dot(np.transpose(Jac),inv(image6points))
     #cov_matrix= inv(np.dot(np.dot(np.transpose(Jac), inv(image6points)), Jac))
-    return image6points# cov_matrix
+    return image6points #cov_matrix
 
 def R_Euler(a,b,c):
     R_Euler= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
@@ -260,14 +260,14 @@ def get_world_position(Rt):
         return w_pos
 
 
-def jacobian_matrix(a,b,c,worldpoints):
+def jacobian_matrix(a,b,c,K,worldpoints):
      point1=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[0, :]))
      point2=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[1, :]))
      point3=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[2, :]))
      point4=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[3, :]))
      point5=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[4, :]))
      point6=nd.Jacobian(p_nonlinear(a,b,c, K, worldpoints[5, :]))
-     Jac=nd.Jacobian((point1,point2,point3,point4,point5,point6))
+     Jac=np.vstack((point1,point2,point3,point4,point5,point6))
      return Jac 
       
     
@@ -313,7 +313,7 @@ trans,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
 condnoise=LA.cond(H)   
 #covnoise=np.cov(H)
  
-#Rt=set_afterDLT_Rt(trans,Rot)
+Rt=set_afterDLT_Rt(trans,Rot)
 
 covmatrix=covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints)
     
