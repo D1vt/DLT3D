@@ -183,6 +183,7 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     a,b,c=a_b_c_from_Euler(Rot,Rt)
     Jac,JacT=jacobian_matrix(a,b,c,K,worldpoints)
     
+    
     mean = 0.0
     scale = 4.0 
     size = 10000
@@ -223,38 +224,35 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
     image6points=np.diag(np.diag( image6points))
     image6points=inv(image6points)
-    covstart=np.dot(JacT,image6points)
-    print covstart
-    covafter=np.dot(covstart,Jac)
-    print covafter
-    return image6points
+    #covstart=np.dot(JacT,image6points)
+    #print covstart
+    #covafter=np.dot(image6points,Jac)
+    #print covafter
+    cov_mat = inv(np.dot(np.dot(JacT,image6points), Jac))
+    return cov_mat,image6points
 
 def R_Euler(a,b,c):
-    R_Euler= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
+    R_Eu= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
                        [math.cos(c)*math.sin(a)+math.cos(a)*math.cos(b)*math.sin(c), math.cos(a)*math.cos(b)*math.cos(c)-math.sin(a)*math.sin(c), -math.cos(a)*math.sin(b)],
                        [math.sin(b)*math.sin(c), math.cos(c)*math.sin(b), math.cos(b)]])
-    return R_Euler
-def point_p(a,b,c,K,X):
-    R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
-                          [math.sin(b)*math.cos(a), math.cos(b), math.cos(b)*math.sin(a)],
-                          [-math.sin(a), 0, math.cos(a)]])
-    R_Eu= R_Euler(0.0,np.deg2rad(180.0),0.0)
-    R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3]) 
-    t_Sphere= np.array([[c*math.sin(a)*math.cos(b)],
-               [c*math.sin(b)*math.sin(a)],
-               [c*math.cos(a)]])
-    t_Sphere=np.dot(R_Sphere, -t_Sphere)
-    Rt_Sphere=np.hstack((R_Sphere, t_Sphere))
-    P=np.dot(K,Rt_Sphere)
-    Y=np.array([[X[0]],
-                [X[1]],
-                [X[2]],
-                [1]])
-    image_point = np.dot(P,Y)
+    dR_Euler_da=np.array([[(-math.sin(a))*math.cos(c) - math.cos(b)*math.cos(a)*math.sin(c), (math.sin(a))*math.sin(c)-math.cos(b)*math.cos(c)*math.cos(a), math.cos(a)*math.sin(b)],
+                       [math.cos(c)*math.cos(a)+(-math.sin(a))*math.cos(b)*math.sin(c), (-math.sin(a))*math.cos(b)*math.cos(c)-math.cos(a)*math.sin(c), math.sin(a)*math.sin(b)],
+                       [0., 0.,0.]])
+    dR_Euler_db=np.array([[math.sin(b)*math.sin(a)*math.sin(c), math.sin(b)*math.cos(c)*math.sin(a), math.sin(a)*math.cos(b)],
+                       [math.cos(a)*(-math.sin(b))*math.sin(c), math.cos(a)*(-math.sin(b))*math.cos(c), -math.cos(a)*math.cos(b)],
+                       [math.cos(b)*math.sin(c), math.cos(c)*math.cos(b), (-math.sin(b))]])
+    dR_Euler_dc=np.array([[math.cos(a)*(-math.sin(c)) - math.cos(b)*math.sin(a)*math.cos(c), -math.cos(a)*math.cos(c)-math.cos(b)*(-math.sin(c))*math.sin(a),0.],
+                       [(-math.sin(c))*math.sin(a)+math.cos(a)*math.cos(b)*math.cos(c), math.cos(a)*math.cos(b)*(-math.sin(c))-math.sin(a)*math.cos(c), 0.],
+                       [math.sin(b)*math.cos(c), (-math.sin(c))*math.sin(b), 0.]])
+    return R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc
+
     
-    u= image_point[0]/image_point[2]
-    v= image_point[1]/image_point[2]
-    return np.array([u,v])
+   
+    
+    
+    
+  
+    
     
 
 
@@ -262,21 +260,91 @@ def get_world_position(Rt):
         w_pos = np.dot(inv(Rt), np.array([0,0,0,1]))
         return w_pos
 
-
+def jacobian_uv(X,P_da,P_db,P_dc):
+     Y=np.array([[X[0]],
+                [X[1]],
+                [X[2]],
+                [1]]) 
+     image_point_da = np.dot(P_da,Y)
+     image_point_db = np.dot(P_db,Y)
+     image_point_dc = np.dot(P_dc,Y)
+     u_da=  image_point_da[0]/ image_point_da[2]
+     v_da=  image_point_da[1]/image_point_da[2]
+     u_db=image_point_db[0]/image_point_db[2]
+     v_db=image_point_db[1]/image_point_db[2]
+     u_dc=image_point_dc[0]/image_point_dc[2]
+     v_dc=image_point_dc[1]/image_point_dc[2]
+     return float(u_da),float(u_db),float(u_dc),float(v_da),float(v_db),float(v_dc) #2*3
+ 
 def jacobian_matrix(a,b,c,K,worldpoints):
      #o jacobian prepei na vgei 3*12
-     Jacob_matrix = nd.Jacobian(point_p) 
-     point1=Jacob_matrix(a,b,c, K, worldpoints[0, :])
-
-     point2=Jacob_matrix(a,b,c, K, worldpoints[1, :])
-     point3=Jacob_matrix(a,b,c, K, worldpoints[2, :])
-     point4=Jacob_matrix(a,b,c, K, worldpoints[3, :])
-     point5=Jacob_matrix(a,b,c, K, worldpoints[4, :])
-     point6=Jacob_matrix(a,b,c, K, worldpoints[5, :])
-     JacT=np.array([point1[0,0],point1[0,1],point2[0,0],point2[0,1],point3[0,0],point3[0,1],point4[0,0],point4[0,1],point5[0,0],point5[0,1],point6[0,0],point6[0,1]])
-     Jac=np.array([[point1[0,0]],[point1[0,1]],[point2[0,0]],[point2[0,1]],[point3[0,0]],[point3[0,1]],[point4[0,0]],[point4[0,1]],[point5[0,0]],[point5[0,1]],[point6[0,0]],[point6[0,1]]])
-     print Jac
-     print JacT
+     R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
+                       [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
+                       [math.sin(a), 0, math.cos(a)]])
+     
+     dR_da=np.array([ [math.cos(b)*(-math.sin(a)),0, math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
+                          [math.sin(b)*(-math.sin(a)), 0, math.sin(b)*math.cos(a)], #c*math.sin(b)*math.cos(a),
+                          [(-math.sin(a)), 0,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
+     dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
+                          [math.cos(b)*math.cos(a), (-math.sin(b)),(-math.sin(b))*math.sin(a)],
+                          [0., 0., 0.]])
+     dR_dc=np.full((3,3),0.0) 
+     R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc=R_Euler(0.0,np.deg2rad(180.0),0.0)
+     R_Sphere_da=np.dot(dR_da,R_Eu)+np.dot(R_Sphere,dR_Euler_da)
+     R_Sphere_db=np.dot(dR_db,R_Eu)+np.dot(R_Sphere,dR_Euler_db)
+     R_Sphere_dc=np.dot(dR_dc,R_Eu)+np.dot(R_Sphere,dR_Euler_dc)
+     R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
+     t_Sphere= np.array([[c*math.sin(a)*math.cos(b)],
+            [c*math.sin(b)*math.sin(a)],
+             [c*math.cos(a)]])
+     t_da=np.array([[c*math.cos(a)*math.cos(b)],
+            [c*math.sin(b)*math.cos(a)],
+             [c*(-math.sin(a))]])
+     t_db=np.array([[c*math.sin(a)*(-math.sin(b))],
+            [c*math.cos(b)*math.sin(a)],
+             [0.]])
+     t_dc=np.array([[math.sin(a)*math.cos(b)],
+            [math.sin(b)*math.sin(a)],
+             [math.cos(a)]])
+     t_Sphere_da=np.dot(R_Sphere_da, -t_Sphere)+np.dot(R_Sphere, -t_da)
+     t_Sphere_db=np.dot(R_Sphere_db, -t_Sphere)+np.dot(R_Sphere, -t_db)
+     t_Sphere_dc=np.dot(R_Sphere_dc, -t_Sphere)+np.dot(R_Sphere, -t_dc)
+     t_Sphere=np.dot(R_Sphere,-t_Sphere)
+     #Rt_Sphere=np.hstack((R_Sphere, t_Sphere))
+     dRt_da=np.hstack((R_Sphere_da, t_Sphere_da))
+     dRt_db=np.hstack((R_Sphere_db, t_Sphere_db))
+     dRt_dc=np.hstack((R_Sphere_dc, t_Sphere_dc))
+     P_da=np.dot(K,dRt_da)
+     P_db=np.dot(K,dRt_db)
+     P_dc=np.dot(K,dRt_dc)
+     u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P_da,P_db,P_dc)
+     u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P_da,P_db,P_dc)
+     
+     u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P_da,P_db,P_dc)
+     u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P_da,P_db,P_dc)
+     u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P_da,P_db,P_dc)
+     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P_da,P_db,P_dc)
+     
+     JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,float(v3a),v4a,v5a,v6a],
+                   [u1b,u2b,u3b,u4b,u5b,u6b,v1b,v2b,float(v3b),v4b,v5b,v6b],
+                   [u1c,u2c,u3c,u4c,u5c,u6c,v1c,v2c,float(v3c),v4c,v5c,v6c]])
+     
+    
+    #3*12 Jac
+     Jac=np.array([[u1a,u1b,u1c],
+                    [u2a,u2b,u2c],
+                    [u3a,u3b,u3c],
+                    [u4a,u4b,u4c],
+                    [u5a,u5b,u5c],
+                    [u6a,u6b,u6c],
+                    [v1a,v1b,v1c],
+                    [v2a,v2b,v2c],
+                    [v3a,v3b,v3c],
+                    [v4a,v4b,v4c],
+                    [v5a,v5b,v5c],
+                    [v6a,v6b,v6c]])
+     #print JacT 
+    
      return Jac,JacT
       
     
@@ -324,6 +392,6 @@ condnoise=LA.cond(H)
  
 Rt=set_afterDLT_Rt(trans,Rot)
 
-covmatrix=covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints)
+covmatrix,imagecov=covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints)
     
 
