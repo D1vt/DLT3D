@@ -159,7 +159,7 @@ def add_noise(imagePoints,sd=4,mean=0):
     return imagePoints           
     
     
-   ### here we solve the problem using shperical coordinates and Euler angles
+   ### here we solve the problem using spherical coordinates and Euler angles
 
 
 def a_b_c_from_Euler(Rot,Rt):
@@ -205,8 +205,6 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     px6 = np.random.normal(mean, scale, size) + imagePoints[5, 0]
     py6 = np.random.normal(mean, scale, size) + imagePoints[5, 1]
     
-    #imagePoints=add_noise(imagePoints)
-    #imagePoints=normalize(imagePoints)
     cov_mat_p1 = np.cov(px1,py1)
     cov_mat_p2 = np.cov(px2,py2)
     cov_mat_p3 = np.cov(px3,py3)
@@ -224,10 +222,6 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
     image6points=np.diag(np.diag( image6points))
     image6points=inv(image6points)
-    #covstart=np.dot(JacT,image6points)
-    #print covstart
-    #covafter=np.dot(image6points,Jac)
-    #print covafter
     cov_mat = inv(np.dot(np.dot(JacT,image6points), Jac))
     return cov_mat,image6points
 
@@ -246,20 +240,10 @@ def R_Euler(a,b,c):
                        [math.sin(b)*math.cos(c), (-math.sin(c))*math.sin(b), 0.]])
     return R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc
 
-    
-   
-    
-    
-    
-  
-    
-    
-
-
 def get_world_position(Rt):
         w_pos = np.dot(inv(Rt), np.array([0,0,0,1]))
         return w_pos
-
+ 
 def jacobian_uv(X,P_da,P_db,P_dc):
      Y=np.array([[X[0]],
                 [X[1]],
@@ -276,8 +260,9 @@ def jacobian_uv(X,P_da,P_db,P_dc):
      v_dc=image_point_dc[1]/image_point_dc[2]
      return float(u_da),float(u_db),float(u_dc),float(v_da),float(v_db),float(v_dc) #2*3
  
+        #function for the jacobian matrix (spherical coordinates)
 def jacobian_matrix(a,b,c,K,worldpoints):
-     #o jacobian prepei na vgei 3*12
+    
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
                        [math.sin(a), 0, math.cos(a)]])
@@ -325,12 +310,13 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P_da,P_db,P_dc)
      u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P_da,P_db,P_dc)
      
-     JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,float(v3a),v4a,v5a,v6a],
-                   [u1b,u2b,u3b,u4b,u5b,u6b,v1b,v2b,float(v3b),v4b,v5b,v6b],
-                   [u1c,u2c,u3c,u4c,u5c,u6c,v1c,v2c,float(v3c),v4c,v5c,v6c]])
+        #3*12 JacTranspose
+     JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,v3a,v4a,v5a,v6a],
+                   [u1b,u2b,u3b,u4b,u5b,u6b,v1b,v2b,v3b,v4b,v5b,v6b],
+                   [u1c,u2c,u3c,u4c,u5c,u6c,v1c,v2c,v3c,v4c,v5c,v6c]])
      
     
-    #3*12 Jac
+    #12*3 Jac
      Jac=np.array([[u1a,u1b,u1c],
                     [u2a,u2b,u2c],
                     [u3a,u3b,u3c],
@@ -346,13 +332,11 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      #print JacT 
     
      return Jac,JacT
-      
-    
-   #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
+        
         
 #values
 P = np.eye(3,4)
-R = np.eye(4, dtype=np.float32) # rotatio
+R = np.eye(4, dtype=np.float32) # rotation
 t = np.eye(4, dtype=np.float32) # translation
 Rt = np.eye(4, dtype=np.float32)
 
