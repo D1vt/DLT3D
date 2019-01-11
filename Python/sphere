@@ -11,8 +11,8 @@ from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
-import algopy
-import numdifftools as nd
+
+
 
 def set_P(K,Rt):
         # P = K[R|t]
@@ -68,7 +68,7 @@ def set_R_axisAngle(x,y,z, alpha,K,t):
         return R,P
   
 def set_t(x,y,z,K,R, frame = 'camera'):
-        #self.t = array([[x],[y],[z]])
+        #set t 
         t = np.eye(4)
         if frame=='world':
           cam_world = np.array([x,y,z,1]).T
@@ -80,9 +80,11 @@ def set_t(x,y,z,K,R, frame = 'camera'):
         P=set_P(K,Rt)
         return t,P
 
+#update the Rt every time R or t  is changed
 def update_Rt(R,t):
     Rt=np.dot(R,t)
     return Rt
+
 #Create T=[R|t]
 def set_afterDLT_Rt(trans,R):
     B=np.full((4, 4), 0.0)
@@ -94,16 +96,19 @@ def set_afterDLT_Rt(trans,R):
     B[3,3]=1
     return B 
 
+#take 6 random points from a sphere , set them as worldpoints for the DLT3D
 def spherepoints(points):
     worldpoints = np.random.randn(points, 3)
     worldpoints /= np.linalg.norm(worldpoints, axis=0)
     return worldpoints
 
+#here I normalize the given ImagePoints
 def normalize(imagePoints):
     normp= np.linalg.norm(imagePoints)
     imagePoints=imagePoints/normp
     return imagePoints               
 
+#This is the DLT Algorithm, having 3D real world points
 def DLT3D(worldpoints, imagepoints, K, normalization=False):
     A=np.full((12, 12), 0.0)
     M=np.full((12, 1), 0.0)
@@ -152,7 +157,7 @@ def DLT3D(worldpoints, imagepoints, K, normalization=False):
         pnorm=normalize(imagepoints)
         return DLT3D(worldpoints,pnorm, K, True)
     
-    
+ #a function to add random noise to given imagepoints   
 def add_noise(imagePoints,sd=4,mean=0):
     gauss_noise= np.random.normal(mean,sd)
     imagePoints=imagePoints+gauss_noise
@@ -161,9 +166,9 @@ def add_noise(imagePoints,sd=4,mean=0):
     
    ### here we solve the problem using spherical coordinates and Euler angles
 
-
+#calculate the a,b,c 
 def a_b_c_from_Euler(Rot,Rt):
-    world_position = get_world_position(Rt)  #[x,y,z,1]
+    world_position = get_world_position(Rt)  
     x = world_position[0]
     y = world_position[1]
     z = world_position[2]
@@ -178,15 +183,17 @@ def a_b_c_from_Euler(Rot,Rt):
        b = math.atan(y / x)
     return a,b,r
 
+#a function to calculate cov matrix . The equation for the final cov matrix (given in Thesis Tracking Errors in AR (eq. 5.8) = inv(np.dot(np.dot(JacT,image6points), Jac)), where JacT is the transpose matrix of Jacobian matrix (in spherical coordinates) 
 def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
-    #xyz_sphere=xyz_sphere(a,b,r)
+    #calculate the a,b,c in spherical coord. 
     a,b,c=a_b_c_from_Euler(Rot,Rt)
     Jac,JacT=jacobian_matrix(a,b,c,K,worldpoints)
     
-    
+    #adding noise to imagePoints
     mean = 0.0
     scale = 4.0 
     size = 10000
+    #Point 1
     px1 = np.random.normal(mean, scale, size) + imagePoints[0, 0]
     py1 = np.random.normal(mean, scale, size) + imagePoints[0, 1]
     # Point 2
@@ -205,6 +212,7 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     px6 = np.random.normal(mean, scale, size) + imagePoints[5, 0]
     py6 = np.random.normal(mean, scale, size) + imagePoints[5, 1]
     
+#Calculate the cov. matrix for each point in order to create the Σvi (eq. 5.8)
     cov_mat_p1 = np.cov(px1,py1)
     cov_mat_p2 = np.cov(px2,py2)
     cov_mat_p3 = np.cov(px3,py3)
@@ -213,7 +221,7 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
     cov_mat_p6 = np.cov(px6,py6)
     
     
-    
+    #create the 12*12 cov matrix, that has 0 everywhere except in the main diagonal
     image6points = np.block([[cov_mat_p1, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
                                       [np.zeros((2, 2)), cov_mat_p2, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p3, np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2))],
@@ -221,10 +229,13 @@ def covariance_matrix_p(K,Rot,Rt,worldpoints,imagePoints):
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), cov_mat_p5, np.zeros((2, 2))],
                                        [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
     image6points=np.diag(np.diag( image6points))
+    #the eq. 5.8 uses the inv. cov. matrix of those points
     image6points=inv(image6points)
+    #find the final 3*3 matrix
     cov_mat = inv(np.dot(np.dot(JacT,image6points), Jac))
     return cov_mat,image6points
 
+#here I calculate the R from Euler equations and also the following: dR/da , dR/db , dR/dc as I am going to use them to calculate the Jacobian Matrix 
 def R_Euler(a,b,c):
     R_Eu= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
                        [math.cos(c)*math.sin(a)+math.cos(a)*math.cos(b)*math.sin(c), math.cos(a)*math.cos(b)*math.cos(c)-math.sin(a)*math.sin(c), -math.cos(a)*math.sin(b)],
@@ -244,6 +255,7 @@ def get_world_position(Rt):
         w_pos = np.dot(inv(Rt), np.array([0,0,0,1]))
         return w_pos
  
+#I am using this function to find the u&v of each point (p. 81-82 in "Tracking Errors in AI")      
 def jacobian_uv(X,P_da,P_db,P_dc):
      Y=np.array([[X[0]],
                 [X[1]],
@@ -260,7 +272,8 @@ def jacobian_uv(X,P_da,P_db,P_dc):
      v_dc=image_point_dc[1]/image_point_dc[2]
      return float(u_da),float(u_db),float(u_dc),float(v_da),float(v_db),float(v_dc) #2*3
  
-        #function for the jacobian matrix (spherical coordinates)
+        
+#here I calculate Jacobian matrix and transpose of the Jacobian matrix. As I have to calculate the Jacobian Matrix I need to calculate the following: dR/da, dR/db,dR/dc , dt/da , dt/db, dt/dc 
 def jacobian_matrix(a,b,c,K,worldpoints):
     
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
@@ -295,28 +308,31 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      t_Sphere_db=np.dot(R_Sphere_db, -t_Sphere)+np.dot(R_Sphere, -t_db)
      t_Sphere_dc=np.dot(R_Sphere_dc, -t_Sphere)+np.dot(R_Sphere, -t_dc)
      t_Sphere=np.dot(R_Sphere,-t_Sphere)
-     #Rt_Sphere=np.hstack((R_Sphere, t_Sphere))
+     #then I am using them to find the following: dRt/da , dRt/db, dRt/dc where a,b,c were calculated in a previous function
      dRt_da=np.hstack((R_Sphere_da, t_Sphere_da))
      dRt_db=np.hstack((R_Sphere_db, t_Sphere_db))
      dRt_dc=np.hstack((R_Sphere_dc, t_Sphere_dc))
+     
+     #I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in AR"
      P_da=np.dot(K,dRt_da)
      P_db=np.dot(K,dRt_db)
      P_dc=np.dot(K,dRt_dc)
+      
+     #then for each one of the world points I find the u,v and use them to calculate the Jacobian Matrix. So I need to calculate the followin for each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc
      u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P_da,P_db,P_dc)
      u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P_da,P_db,P_dc)
-     
      u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P_da,P_db,P_dc)
      u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P_da,P_db,P_dc)
      u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P_da,P_db,P_dc)
      u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P_da,P_db,P_dc)
      
-        #3*12 JacTranspose
+     #3*12 Jacobian.Transpose
      JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,v3a,v4a,v5a,v6a],
                    [u1b,u2b,u3b,u4b,u5b,u6b,v1b,v2b,v3b,v4b,v5b,v6b],
                    [u1c,u2c,u3c,u4c,u5c,u6c,v1c,v2c,v3c,v4c,v5c,v6c]])
      
     
-    #12*3 Jac
+     #12*3 Jacobian Matrix
      Jac=np.array([[u1a,u1b,u1c],
                     [u2a,u2b,u2c],
                     [u3a,u3b,u3c],
