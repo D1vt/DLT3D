@@ -1,10 +1,18 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
+Created on Thu Jan 17 15:59:45 2019
+
+@author: diana
+"""
+
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
 Created on Sat Jan  5 15:41:33 2019
 /
 @author: diana
-@set_P, set_K, set_R_axisAngle, set_t developed by raultron
+@class Camera & set_P, set_K, set_R_axisAngle, set_t, project developed by raultron
 """
 import numpy as np 
 from random import randrange
@@ -12,61 +20,99 @@ from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
 
-def set_P(K,Rt):
+class Camera(object):
+    """ Class for representing pin-hole cameras. """
+    def __init__(self):
+        """ Initialize P = K[R|t] camera model. """
+        self.P = np.eye(3,4)
+        self.K = np.eye(3, dtype=np.float32) # calibration matrix
+        self.R = np.eye(4, dtype=np.float32) # rotation
+        self.t = np.eye(4, dtype=np.float32) # translation
+        self.Rt = np.eye(4, dtype=np.float32)
+        self.fx = 1.
+        self.fy = 1.
+        self.cx = 0.
+        self.cy = 0.
+        self.img_width = 1280
+        self.img_height = 960
+
+def set_P(self):
         # P = K[R|t]
         # P is a 3x4 Projection Matrix (from 3d euclidean to image)
-        #self.Rt = hstack((self.R, self.t))
-        P = np.dot(K,Rt[:3,:4])
-        return P
+        #self.Rt = np.hstack((self.R, self.t))
+        self.P = np.dot(self.K, self.Rt[:3,:4])
     
-def set_K(fx = 1, fy = 1, cx = 0,cy = 0):
+def set_K(self, fx = 1, fy = 1, cx = 0,cy = 0):
         # K is the 3x3 Camera matrix
         # fx, fy are focal lenghts expressed in pixel units
         # cx, cy is a principal point usually at image center
-        K = np.mat([[fx, 0, cx],
+        self.fx = fx
+        self.fy = fy
+        self.cx = cx
+        self.cy = cy
+        self.K = np.mat([[fx, 0, cx],
                       [0,fy,cy],
-                      [0,0,1.]], dtype=np.float32)   
-        return K
+                      [0,0,1.]], dtype=np.float32)
+        set_P(cam)
 
 
+def set_width_heigth(self,width, heigth):
+        self.img_width = width
+        self.img_height = heigth
 
-def project(worldpoints, P, imagePoints, quant_error=False):
-        """  Project points in x (6*n array) & convert to homogeneous"""
-        x = np.dot(P,worldpoints)
-        for i in range(x.shape[1]):
-          x[:,i] /= x[2,i]
-        if(quant_error):
-            x = np.around(x, decimals=0)
-        return x
-   
+def update_Rt(self):
+        self.Rt = np.dot(self.t,self.R)
+    
+        set_P(cam)
 
-def set_R_axisAngle(x,y,z, alpha):
+def set_R_axisAngle(self,x,y,z, alpha):
         """  Creates a 3D [R|t] matrix for rotation
         around the axis of the vector defined by (x,y,z)
         and an alpha angle."""
         #Normalize the rotation axis a
         a = np.array([x,y,z])
         a = a / np.linalg.norm(a)
+
+        #Build the skew symetric
         a_skew = np.mat([[0,-a[2],a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
         R = np.eye(4)
         R[:3,:3] = expm(a_skew*alpha)
-        return R
-  
-def set_t(x,y,z,R, frame = 'camera'):
+        self.R = R
+        update_Rt(cam)
+   
+
+def set_R_mat(self,R):
+        self.R = R
+        self.update_Rt()
+
+
+def set_t(self, x,y,z, frame = 'camera'):
         #self.t = array([[x],[y],[z]])
-        t = np.eye(4)
+        self.t = np.eye(4)
         if frame=='world':
           cam_world = np.array([x,y,z,1]).T
-          cam_t = np.dot(R,-cam_world)
-          t[:3,3] = cam_t[:3]
+          cam_t = np.dot(self.R,-cam_world)
+          self.t[:3,3] = cam_t[:3]
         else:
-          t[:3,3] = np.array([x,y,z])
+          self.t[:3,3] = np.array([x,y,z])
+        update_Rt(cam)
+
+
+
+def get_world_position(self):
+        t = np.dot(inv(cam.Rt), np.array([0,0,0,1]))
         return t
 
-def update_Rt(R,t):
-    Rt=np.dot(R,t)
-    return Rt
 
+def project(self,X, quant_error=False):
+        """  Project points in X (4*n array) and normalize coordinates. """
+        #set_P(cam)
+        x = np.dot(self.P,X)
+        for i in range(x.shape[1]):
+          x[:,i] /= x[2,i]
+        if(quant_error):
+            x = np.around(x, decimals=0)
+        return x
 
 def spherepoints(points):
     worldpoints = np.random.randn(points, 3)
@@ -80,7 +126,7 @@ def normalize(imagepoints):
     imagepoints=imagepoints/normp
     return imagepoints               
 
-def DLT3D(worldpoints, imagepoints, K, normalization=False):
+def DLT3D(worldpoints, imagepoints, normalization=False):
     #if odd row 0,0,0,0,xi,yi,zi,1,-vixi,-viyi,-vizi,-vi
     #if even row : Χι,Υι,Ζι,1,0,0,0,0,-uixi,-uiyi,-uizi,-ui
     if(normalization):
@@ -95,28 +141,46 @@ def DLT3D(worldpoints, imagepoints, K, normalization=False):
                [worldpoints[0,4],worldpoints[1,4],worldpoints[2,4],1.,0.,0.,0.,0.,-imagepoints[0,4]*worldpoints[0,4],-imagepoints[0,4]*worldpoints[1,4],-imagepoints[0,4]*worldpoints[2,4],-imagepoints[0,4]],
                [0.,0.,0.,0.,worldpoints[0,4],worldpoints[1,4],worldpoints[2,4],1.,-imagepoints[1,4]*worldpoints[0,4],-imagepoints[1,4]*worldpoints[1,4],-imagepoints[1,4]*worldpoints[2,4],-imagepoints[1,4]],
                [worldpoints[0,5],worldpoints[1,5],worldpoints[2,5],1.,0.,0.,0.,0.,-imagepoints[0,5]*worldpoints[0,5],-imagepoints[0,5]*worldpoints[1,5],-imagepoints[0,5]*worldpoints[2,5],-imagepoints[0,5]],
-               [0.,0.,0.,0.,worldpoints[0,5],worldpoints[1,5],worldpoints[2,5],1.,-imagepoints[1,5]*worldpoints[1,5],-imagepoints[1,5]*worldpoints[1,5],-imagepoints[1,5]*worldpoints[2,5],-imagepoints[1,5]]])
+               [0.,0.,0.,0.,worldpoints[0,5],worldpoints[1,5],worldpoints[2,5],1.,-imagepoints[1,5]*worldpoints[0,5],-imagepoints[1,5]*worldpoints[1,5],-imagepoints[1,5]*worldpoints[2,5],-imagepoints[1,5]]])
    
-     U, s, V = np.linalg.svd(A, full_matrices=True)
-     M=V[:,11]
-     trans[2]=M[11]/K[2,2]
-     trans[1]=(M[7]-K[1,2]*trans[2])/K[1,1]
-     trans[0]=(M[3]-K[0,1]*trans[1]-K[0,2]*trans[2])/K[0,0]            
+     U, s, V = np.linalg.svd(A, full_matrices=False)
+     
+     H=np.array([[V[0,11],V[1,11],V[2,11],V[3,11]],
+                [V[4,11],V[5,11],V[6,11],V[7,11]],
+                [V[8,11],V[9,11],V[10,11],V[11,11]],
+                [0.,0.,0.,1]])
+     K=cam.K
+     trans[2]=V[11,11]/K[2,2]
+     trans[1]=(V[1,3]-K[1,2]*trans[2])/K[1,1]
+     trans[0]=(V[0,3]-K[0,1]*trans[1]-K[0,2]*trans[2])/K[0,0]            
      for i in range(3):
-          Rot[2,i]=M[i+8]/K[2,2]  #fr3i=m3i
-          Rot[1,i]=(M[i+4]- Rot[2,i]*K[1,2])/K[1,1];  #dr2i+er3i=m2,i
-          Rot[0,i]= (M[i]-K[0,2]*Rot[2,i]-K[0,1]*Rot[1,i])/K[0,0]; #ar1i+br2i+cr3i=m1i
-     H=np.array([[M[0],M[1],M[2],M[3]],
-                [M[4],M[5],M[6],M[7]],
-                [M[8],M[9],M[10],M[11]],
-                [0.,0.,0.,1.]])
+          Rot[2,i]=V[2,i]/K[2,2]  #fr3i=m3i
+          Rot[1,i]=(V[1,i]- Rot[2,i]*K[1,2])/K[1,1];  #dr2i+er3i=m2,i
+          Rot[0,i]= (V[0,i]-K[0,2]*Rot[2,i]-K[0,1]*Rot[1,i])/K[0,0]; #ar1i+br2i+cr3i=m1i
+     
      return trans,Rot,H       
     else:
         pnorm=normalize(imagepoints)
-        return DLT3D(worldpoints,pnorm, K, True)
+        return DLT3D(worldpoints,pnorm, True)
     
     #adding noise to each u,v of the image (random gaussian noise)
 def add_noise(imagepoints,sd=4.,mean=0., size=10000):
+   if size==0:
+    imagenoise=np.full((2,6),0.0)
+    imagenoise[0,0]=np.random.normal(mean,sd)+ imagepoints[0,0]
+    imagenoise[1,0]=np.random.normal(mean,sd)+ imagepoints[1,0]
+    imagenoise[0,1]=np.random.normal(mean,sd)+ imagepoints[0,1]
+    imagenoise[1,1]=np.random.normal(mean,sd)+ imagepoints[1,1]
+    imagenoise[0,2]=np.random.normal(mean,sd)+ imagepoints[0,2]
+    imagenoise[1,2]=np.random.normal(mean,sd)+ imagepoints[1,2]
+    imagenoise[0,3]=np.random.normal(mean,sd)+ imagepoints[0,3]
+    imagenoise[1,3]=np.random.normal(mean,sd)+ imagepoints[1,3]
+    imagenoise[0,4]=np.random.normal(mean,sd)+ imagepoints[0,4]
+    imagenoise[1,4]=np.random.normal(mean,sd)+ imagepoints[1,4]
+    imagenoise[0,5]=np.random.normal(mean,sd)+ imagepoints[0,5]
+    imagenoise[1,5]=np.random.normal(mean,sd)+ imagepoints[1,5]
+    return imagenoise
+   else: 
     px1=np.random.normal(mean,sd,size)+ imagepoints[0,0]
     py1=np.random.normal(mean,sd,size)+ imagepoints[1,0]
     px2=np.random.normal(mean,sd,size)+ imagepoints[0,1]
@@ -129,8 +193,9 @@ def add_noise(imagepoints,sd=4.,mean=0., size=10000):
     py5=np.random.normal(mean,sd,size)+ imagepoints[1,4]
     px6=np.random.normal(mean,sd,size)+ imagepoints[0,5]
     py6=np.random.normal(mean,sd,size)+ imagepoints[1,5]
-    return np.array([[px1,px2,px3,px4,px5,px6],
-                    [py1,py2,py3,py4,py5,py6]])         
+    imageNoise=np.array([[px1,px2,px3,px4,px5,px6],
+                        [py1,py2,py3,py4,py5,py6]])
+    return imageNoise        
     
     
   ### here we solve the problem using spherical coordinates and Euler angles
@@ -153,7 +218,7 @@ def a_b_c_from_Euler(Rt):
     return a,b,r
 
 #a function to calculate cov matrix . The equation for the final cov matrix (given in Thesis Tracking Errors in AR (eq. 5.8) = inv(np.dot(np.dot(JacT,image6points), Jac)), where JacT is the transpose matrix of Jacobian matrix (in spherical coordinates) 
-def covariance_matrix_p(K,Rot,Rt,worldpoints,imagepoints):
+def covariance_matrix_p(K,Rt,worldpoints,imagepoints):
     #calculate the a,b,c in spherical coord. 
     a,b,c=a_b_c_from_Euler(Rt)
     Jac,JacT=jacobian_matrix(a,b,c,K,worldpoints)
@@ -201,9 +266,7 @@ def R_Euler(a,b,c):
                        [math.sin(b)*math.cos(c), (-math.sin(c))*math.sin(b), 0.]])
     return R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc
 
-def get_world_position(Rt):
-        w_pos = np.dot(inv(Rt), np.array([0,0,0,1]))
-        return w_pos
+
  
 #I am using this function to find the u&v of each point (p. 81-82 in "Tracking Errors in AI")      
 def jacobian_uv(X,P_da,P_db,P_dc):
@@ -304,49 +367,42 @@ def jacobian_matrix(a,b,c,K,worldpoints):
    #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
         
 #values
-P = np.eye(3,4)
-R = np.eye(4, dtype=np.float32) # rotation
-t = np.eye(4, dtype=np.float32) # translation
-Rt = np.eye(4, dtype=np.float32)
-imagePoints=np.full((3,6),0.0)
-K=set_K(fx = 800, fy = 800, cx = 640, cy = 480)
-P=set_P(K,Rt)
-R=set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
-Rt=update_Rt(R,t)
-P=set_P(K,Rt)
-t=set_t(0.0,-0.0,0.5,R, frame='world')
-Rt=update_Rt(R,t)
-P=set_P(K,Rt)
-worldpoints = spherepoints(6)
+cam=Camera()
+set_K(cam,fx = 800,fy = 800,cx = 640,cy = 480)
+set_width_heigth(cam,960,960)
+imagePoints=np.full((2,6),0.0)
+set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
+set_t(cam,0.0,-0.0,0.5, frame='world')
+#worldpoints = spherepoints(6)
 #testpoints
-#worldpoints = np.array([[-0.206674, 0.240009,-0.29203],
-#                        [0.091502,-0.144823,	0.0323819],
- #                       [0.371293,	-0.458251	,0.269246],
-  #                      [-0.864962	,0.222202	,0.0354375],
-   #                     [-0.211795	,0.418585	,0.491078],
-    #                    [-0.134308	,0.69774,	-0.773798]])
+worldpoints = np.array([[-0.206674, 0.240009,-0.29203,1.],
+                        [0.091502,-0.144823,	0.0323819,1.],
+                        [0.371293,	-0.458251	,0.269246,1.],
+                        [-0.864962	,0.222202	,0.0354375,1.],
+                        [-0.211795	,0.418585	,0.491078,1.],
+                        [-0.134308	,0.69774,	-0.773798,1.]])
+worldpoints=np.transpose(worldpoints)
+
+imagePoints= project(cam,worldpoints, False)
+imagepoints_noise=add_noise(imagePoints,2,0,0)
 
 
-imagePoints = project(worldpoints,P,imagePoints, False)
-imagepoints_noise=add_noise(imagePoints,2,0)
-
-
-
+print cam.P
 
 trans=np.full((3,1), 0.0)
 Rot=np.full((3,3), 0.0)
 
 #NoNoiseTest
-trans,Rot,H=DLT3D(worldpoints, imagePoints, K, True)
+trans,Rot,H=DLT3D(worldpoints,imagePoints, True)
 cond2=LA.cond(H)
 
 #NoiseTest
-#trans,Rot,H=DLT3D(worldpoints, imagepoints_noise, K)
+#trans,Rot,H=DLT3D(worldpoints, imagepoints_noise)
 #condnoise=LA.cond(H)   
 #covnoise=np.cov(H)
  
 
 
-covmatrix,imagecov=covariance_matrix_p(K,Rot,Rt,np.transpose(worldpoints),imagePoints)
+covmatrix,imagecov=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints)
     
 
