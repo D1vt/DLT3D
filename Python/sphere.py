@@ -143,8 +143,10 @@ def DLT3D(worldpoints, imagepoints, normalization=False):
                [worldpoints[0,5],worldpoints[1,5],worldpoints[2,5],1.,0.,0.,0.,0.,-imagepoints[0,5]*worldpoints[0,5],-imagepoints[0,5]*worldpoints[1,5],-imagepoints[0,5]*worldpoints[2,5],-imagepoints[0,5]],
                [0.,0.,0.,0.,worldpoints[0,5],worldpoints[1,5],worldpoints[2,5],1.,-imagepoints[1,5]*worldpoints[0,5],-imagepoints[1,5]*worldpoints[1,5],-imagepoints[1,5]*worldpoints[2,5],-imagepoints[1,5]]])
    
-     U, s, V = np.linalg.svd(A, full_matrices=False)
      
+     U, s, Vh = np.linalg.svd(A)
+     
+     V=np.transpose(Vh)
      H=np.array([[V[0,11],V[1,11],V[2,11],V[3,11]],
                 [V[4,11],V[5,11],V[6,11],V[7,11]],
                 [V[8,11],V[9,11],V[10,11],V[11,11]],
