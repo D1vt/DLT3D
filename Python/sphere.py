@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan 17 15:59:45 2019
-
 @author: diana
 """
 
@@ -122,11 +121,14 @@ def spherepoints(points):
     return worldpoints
 
 def normalize(imagepoints):
-    normp= np.linalg.norm(imagepoints)
-    imagepoints=imagepoints/normp
-    return imagepoints               
+    im=np.full((2,6),0.)
+    im[0,:]=imagepoints[0,:]
+    im[1,:]=imagepoints[1,:]
+    normp= np.linalg.norm(im)
+    im=im/normp
+    return im             
 
-def DLT3D(worldpoints, imagepoints, normalization=False):
+def DLT3D(self,worldpoints, imagepoints, normalization=False):
     #if odd row 0,0,0,0,xi,yi,zi,1,-vixi,-viyi,-vizi,-vi
     #if even row : Χι,Υι,Ζι,1,0,0,0,0,-uixi,-uiyi,-uizi,-ui
     if(normalization):
@@ -146,21 +148,18 @@ def DLT3D(worldpoints, imagepoints, normalization=False):
      
      U, s, Vh = np.linalg.svd(A)
      
-     V=np.transpose(Vh)
-     H=np.array([[V[0,11],V[1,11],V[2,11],V[3,11]],
-                [V[4,11],V[5,11],V[6,11],V[7,11]],
-                [V[8,11],V[9,11],V[10,11],V[11,11]],
-                [0.,0.,0.,1]])
-     K=cam.K
-     trans[2]=V[11,11]/K[2,2]
-     trans[1]=(V[1,3]-K[1,2]*trans[2])/K[1,1]
-     trans[0]=(V[0,3]-K[0,1]*trans[1]-K[0,2]*trans[2])/K[0,0]            
+     Vh=np.transpose(Vh)
+     V=Vh[:,11].reshape(3,4)
+    
+     trans[2]=V[2,3]/self.K[2,2]
+     trans[1]=(V[1,3]-self.K[1,2]*trans[2])/self.K[1,1]
+     trans[0]=(V[0,3]-self.K[0,1]*trans[1]-self.K[0,2]*trans[2])/self.K[0,0]            
      for i in range(3):
-          Rot[2,i]=V[2,i]/K[2,2]  #fr3i=m3i
-          Rot[1,i]=(V[1,i]- Rot[2,i]*K[1,2])/K[1,1];  #dr2i+er3i=m2,i
-          Rot[0,i]= (V[0,i]-K[0,2]*Rot[2,i]-K[0,1]*Rot[1,i])/K[0,0]; #ar1i+br2i+cr3i=m1i
+          Rot[2,i]=V[2,i]/self.K[2,2]  #fr3i=m3i
+          Rot[1,i]=(V[1,i]- Rot[2,i]*self.K[1,2])/self.K[1,1];  #dr2i+er3i=m2,i
+          Rot[0,i]= (V[0,i]-self.K[0,2]*Rot[2,i]-self.K[0,1]*Rot[1,i])/self.K[0,0]; #ar1i+br2i+cr3i=m1i
      
-     return trans,Rot,H       
+     return trans,Rot,V       
     else:
         pnorm=normalize(imagepoints)
         return DLT3D(worldpoints,pnorm, True)
@@ -389,13 +388,13 @@ imagePoints= project(cam,worldpoints, False)
 imagepoints_noise=add_noise(imagePoints,2,0,0)
 
 
-print cam.P
+print cam.R
 
 trans=np.full((3,1), 0.0)
 Rot=np.full((3,3), 0.0)
 
 #NoNoiseTest
-trans,Rot,H=DLT3D(worldpoints,imagePoints, True)
+trans,Rot,H=DLT3D(cam,worldpoints,imagePoints, True)
 cond2=LA.cond(H)
 
 #NoiseTest
@@ -406,5 +405,3 @@ cond2=LA.cond(H)
 
 
 covmatrix,imagecov=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints)
-    
-
