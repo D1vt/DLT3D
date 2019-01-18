@@ -169,26 +169,19 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
 
 #a function for the estimation of R,t using the V matrix from the DLT algorithm    
 def estimate_R_t(self,V):
-     #Hi0Tx+Hi1Ty+Hi2Tz=Hi3  
-     a=(V[1,0]*V[0,2]/V[0,0])-V[1,2]
-     b=V[1,3]-(V[1,0]*V[0,3]/V[0,0])
-     c=V[1,1]-(V[0,1]*V[1,0]/V[0,0])
-     d=(V[0,3]-V[0,1]*(b/c))/V[0,0]
-     e=(V[0,1]*a/c +V[0,2])/V[0,0]     
-     Tz=(V[2,3]-d*V[2,0]-(b/c)*V[2,1])/(V[2,2]+V[2,1]*(a/c)-V[2,0]*e)
-     Ty=(a*Tz+b)/c
-     Tx=d-e*Tz        
+    #source: Multiple View Geometry Richard Hartley and Andrew Zisserman, p.15 decompose P to K,R,t matrices
+     T=np.dot(inv(self.K),V[:,3])
      for i in range(3):
           Rot[2,i]=V[2,i]/self.K[2,2]  #fr3i=m3i
           Rot[1,i]=(V[1,i]- Rot[2,i]*self.K[1,2])/self.K[1,1];  #dr2i+er3i=m2,i
           Rot[0,i]= (V[0,i]-self.K[0,2]*Rot[2,i]-self.K[0,1]*Rot[1,i])/self.K[0,0]; #ar1i+br2i+cr3i=m1i    
-     est_trans=np.array([[1.,0.,0.,Tx],
-                    [0.,1.,0.,Ty],
-                    [0.,0.,1.,Tz],
+     est_trans=np.array([[1.,0.,0.,T[0]],
+                    [0.,1.,0.,T[1]],
+                    [0.,0.,1.,T[2]],
                     [0.,0.,0.,1.]])
      est1_R=np.vstack((Rot,[0.,0.,0.])) #adding a zero row 
      est_R=np.hstack((est1_R,[[0.],[0.],[0.],[1.]]))  #adding an extra column
-     return est_R,est_trans
+     return est_R,est_trans,T
 
 def camera_center(H):
     Q=np.array([[H[0,0],H[0,1],H[0,2]],
@@ -424,11 +417,11 @@ worldpoints = np.array([[-0.206674, 0.240009,-0.29203,1.],
                         [-0.134308	,0.69774,	-0.773798,1.]])
 worldpoints=np.transpose(worldpoints)
 
-imagePoints= project(cam,worldpoints, False)
+imagePoints= project(cam,worldpoints, True)
 imagepoints_noise=add_noise(imagePoints,2,0,0)
 
 
-print cam.R
+print cam.t
 
 Rot=np.full((3,3), 0.0)
 
@@ -436,7 +429,7 @@ Rot=np.full((3,3), 0.0)
 H=DLT3D(cam,worldpoints,imagePoints, False)
 cond2=LA.cond(H)
 cam_center=camera_center(H)
-estimated_R,estimated_t=estimate_R_t(cam,H)
+estimated_R,estimated_t,T=estimate_R_t(cam,H)
 
 #NoiseTest
 #trans,Rot,H=DLT3D(worldpoints, imagepoints_noise)
