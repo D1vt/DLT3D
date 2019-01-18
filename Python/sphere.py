@@ -18,6 +18,9 @@ from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
+
 
 class Camera(object):
     """ Class for representing pin-hole cameras. """
@@ -116,7 +119,15 @@ def project(self,X, quant_error=False):
 def spherepoints(points):
     worldpoints = np.random.randn(points, 3)
     worldpoints /= np.linalg.norm(worldpoints, axis=0)
+    phi = np.linspace(0, np.pi, 20)
+    theta = np.linspace(0, 2 * np.pi, 40)
+    x = np.outer(np.sin(theta), np.cos(phi))
+    y = np.outer(np.sin(theta), np.sin(phi))
+    z = np.outer(np.cos(theta), np.ones_like(phi))
+    fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d', 'aspect':'equal'})
+    ax.plot_wireframe(x, y, z, color='k', rstride=1, cstride=1)
     worldpoints=np.transpose(worldpoints)
+    ax.scatter(worldpoints[0,:], worldpoints[1,:], worldpoints[2,:], s=100, c='r', zorder=10) 
     worldpoints=np.vstack((worldpoints,[1.0,1.0,1.0,1.0,1.0,1.0]))
     return worldpoints
 
@@ -162,8 +173,16 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
      return trans,Rot,V       
     else:
         pnorm=normalize(imagepoints)
-        return DLT3D(worldpoints,pnorm, True)
+        return DLT3D(self,worldpoints,pnorm, True)
     
+def camera_center(H,Rot,trans):
+    Q=-inv(Rot)
+    Qb=np.dot(Q,trans)
+    print Qb
+    cam_center=np.vstack((Qb,[1.]))
+    return cam_center
+
+
     #adding noise to each u,v of the image (random gaussian noise)
 def add_noise(imagepoints,sd=4.,mean=0., size=10000):
    if size==0:
@@ -374,15 +393,15 @@ set_width_heigth(cam,960,960)
 imagePoints=np.full((2,6),0.0)
 set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
 set_t(cam,0.0,-0.0,0.5, frame='world')
-#worldpoints = spherepoints(6)
+worldpoints = spherepoints(6)
 #testpoints
-worldpoints = np.array([[-0.206674, 0.240009,-0.29203,1.],
-                        [0.091502,-0.144823,	0.0323819,1.],
-                        [0.371293,	-0.458251	,0.269246,1.],
-                        [-0.864962	,0.222202	,0.0354375,1.],
-                        [-0.211795	,0.418585	,0.491078,1.],
-                        [-0.134308	,0.69774,	-0.773798,1.]])
-worldpoints=np.transpose(worldpoints)
+#worldpoints = np.array([[-0.206674, 0.240009,-0.29203,1.],
+ #                       [0.091502,-0.144823,	0.0323819,1.],
+  #                      [0.371293,	-0.458251	,0.269246,1.],
+   #                     [-0.864962	,0.222202	,0.0354375,1.],
+    #                    [-0.211795	,0.418585	,0.491078,1.],
+     #                   [-0.134308	,0.69774,	-0.773798,1.]])
+#worldpoints=np.transpose(worldpoints)
 
 imagePoints= project(cam,worldpoints, False)
 imagepoints_noise=add_noise(imagePoints,2,0,0)
@@ -394,8 +413,9 @@ trans=np.full((3,1), 0.0)
 Rot=np.full((3,3), 0.0)
 
 #NoNoiseTest
-trans,Rot,H=DLT3D(cam,worldpoints,imagePoints, True)
+trans,Rot,H=DLT3D(cam,worldpoints,imagePoints, False)
 cond2=LA.cond(H)
+cam_center=camera_center(H,Rot,trans)
 
 #NoiseTest
 #trans,Rot,H=DLT3D(worldpoints, imagepoints_noise)
