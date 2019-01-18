@@ -175,11 +175,17 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
         pnorm=normalize(imagepoints)
         return DLT3D(self,worldpoints,pnorm, True)
     
-def camera_center(H,Rot,trans):
-    Q=-inv(Rot)
-    Qb=np.dot(Q,trans)
-    print Qb
-    cam_center=np.vstack((Qb,[1.]))
+def camera_center(H):
+    Q=np.array([[H[0,0],H[0,1],H[0,2]],
+               [H[1,0],H[1,1],H[1,2]],
+               [H[2,0],H[2,1],H[2,2]]])
+    b=np.array([[H[0,3]],
+                [H[1,3]],
+                [H[2,3]]])
+    Q=-inv(Q)
+    print Q
+    Qb=np.dot(Q,b)
+    cam_center=np.vstack((Qb,1.))
     return cam_center
 
 
@@ -415,7 +421,7 @@ Rot=np.full((3,3), 0.0)
 #NoNoiseTest
 trans,Rot,H=DLT3D(cam,worldpoints,imagePoints, False)
 cond2=LA.cond(H)
-cam_center=camera_center(H,Rot,trans)
+cam_center=camera_center(H)
 
 #NoiseTest
 #trans,Rot,H=DLT3D(worldpoints, imagepoints_noise)
