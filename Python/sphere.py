@@ -131,19 +131,28 @@ def spherepoints(points):
     worldpoints=np.vstack((worldpoints,[1.0,1.0,1.0,1.0,1.0,1.0]))
     return worldpoints
 
-def normalize(imagepoints):
-    im=np.full((2,6),0.)
-    im[0,:]=imagepoints[0,:]
-    im[1,:]=imagepoints[1,:]
-    normp= np.linalg.norm(im)
-    im=im/normp
-    return im             
+def normalize(points,size=2):
+     n_points=np.full((size,6),0.)
+     T=np.eye(size+1)
+     n_points[0,:]=points[0,:]
+     n_points[1,:]=points[1,:]
+     if size==3:
+        n_points[2,:]=points[2,:]
+     
+     normp= np.linalg.norm(n_points)
+     T=(1./normp)*T
+     T[size,size]=1.
+     n_points=n_points/normp
+     return n_points,T   
 
 def DLT3D(self,worldpoints, imagepoints, normalization=False):
     #if odd row 0,0,0,0,xi,yi,zi,1,-vixi,-viyi,-vizi,-vi
     #if even row : Χι,Υι,Ζι,1,0,0,0,0,-uixi,-uiyi,-uizi,-ui
-    if(normalization):
-     A=np.array([[worldpoints[0,0],worldpoints[1,0],worldpoints[2,0],1.,0.,0.,0.,0.,-imagepoints[0,0]*worldpoints[0,0],-imagepoints[0,0]*worldpoints[1,0],-imagepoints[0,0]*worldpoints[2,0],-imagepoints[0,0]],
+    if (normalization==False):
+       imagepoints,T=normalize(imagepoints)
+       worldpoints,U=normalize(worldpoints,3)
+   
+    A=np.array([[worldpoints[0,0],worldpoints[1,0],worldpoints[2,0],1.,0.,0.,0.,0.,-imagepoints[0,0]*worldpoints[0,0],-imagepoints[0,0]*worldpoints[1,0],-imagepoints[0,0]*worldpoints[2,0],-imagepoints[0,0]],
                [0.,0.,0.,0.,worldpoints[0,0],worldpoints[1,0],worldpoints[2,0],1.,-imagepoints[1,0]*worldpoints[0,0],-imagepoints[1,0]*worldpoints[1,0],-imagepoints[1,0]*worldpoints[2,0],-imagepoints[1,0]], 
                [worldpoints[0,1],worldpoints[1,1],worldpoints[2,1],1.,0.,0.,0.,0.,-imagepoints[0,1]*worldpoints[0,1],-imagepoints[0,1]*worldpoints[1,1],-imagepoints[0,1]*worldpoints[2,1],-imagepoints[0,1]],                              
                [0.,0.,0.,0.,worldpoints[0,1],worldpoints[1,1],worldpoints[2,1],1.,-imagepoints[1,1]*worldpoints[0,1],-imagepoints[1,1]*worldpoints[1,1],-imagepoints[1,1]*worldpoints[2,1],-imagepoints[1,1]],
@@ -157,19 +166,24 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
                [0.,0.,0.,0.,worldpoints[0,5],worldpoints[1,5],worldpoints[2,5],1.,-imagepoints[1,5]*worldpoints[0,5],-imagepoints[1,5]*worldpoints[1,5],-imagepoints[1,5]*worldpoints[2,5],-imagepoints[1,5]]])
    
      
-     U, s, Vh = np.linalg.svd(A)
+    U1, s, Vh = np.linalg.svd(A)
      
-     Vh=np.transpose(Vh)
-     V=Vh[:,11].reshape(3,4)
-     
-     return V       
-    else:
-        pnorm=normalize(imagepoints)
-        return DLT3D(self,worldpoints,pnorm, True)
+    Vh=np.transpose(Vh)
+    V=Vh[:,11].reshape(3,4)
+    H=denormalization(V,U,T)
+    return H      
 
-#a function for the estimation of R,t using the V matrix from the DLT algorithm    
+#denormalize to find the final H matrix source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf (p.23)
+def denormalization(V,U,T):
+    T=inv(T)
+    TV=np.dot(T,V)
+    H=np.dot(TV,U)
+    return H
+
+#a function for the estimation of R,t using the V matrix from the DLT algorithm  
 def estimate_R_t(self,V):
     #source: Multiple View Geometry Richard Hartley and Andrew Zisserman, p.15 decompose P to K,R,t matrices
+     Rot=np.full((3,3), 0.0) 
      T=np.dot(inv(self.K),V[:,3])
      for i in range(3):
           Rot[2,i]=V[2,i]/self.K[2,2]  #fr3i=m3i
@@ -181,8 +195,9 @@ def estimate_R_t(self,V):
                     [0.,0.,0.,1.]])
      est1_R=np.vstack((Rot,[0.,0.,0.])) #adding a zero row 
      est_R=np.hstack((est1_R,[[0.],[0.],[0.],[1.]]))  #adding an extra column
-     return est_R,est_trans,T
+     return est_R,est_trans
 
+#find camera center source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf
 def camera_center(H):
     Q=np.array([[H[0,0],H[0,1],H[0,2]],
                [H[1,0],H[1,1],H[1,2]],
@@ -191,7 +206,7 @@ def camera_center(H):
                 [H[1,3]],
                 [H[2,3]]])
     Q=-inv(Q)
-    print Q
+  
     Qb=np.dot(Q,b)
     cam_center=np.vstack((Qb,1.))
     return cam_center
@@ -397,7 +412,7 @@ def jacobian_matrix(a,b,c,K,worldpoints):
     
      return Jac,JacT
         
-    
+   #na vrw prepei pws apokanonikopoiw 
    #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
         
 #values
@@ -417,25 +432,24 @@ worldpoints = np.array([[-0.206674, 0.240009,-0.29203,1.],
                         [-0.134308	,0.69774,	-0.773798,1.]])
 worldpoints=np.transpose(worldpoints)
 
-imagePoints= project(cam,worldpoints, True)
+imagePoints= project(cam,worldpoints, False)
 imagepoints_noise=add_noise(imagePoints,2,0,0)
 
 
 print cam.t
 
-Rot=np.full((3,3), 0.0)
+
 
 #NoNoiseTest
-H=DLT3D(cam,worldpoints,imagePoints, False)
-cond2=LA.cond(H)
-cam_center=camera_center(H)
-estimated_R,estimated_t,T=estimate_R_t(cam,H)
+#H=DLT3D(cam,worldpoints,imagePoints)
+
 
 #NoiseTest
-#trans,Rot,H=DLT3D(worldpoints, imagepoints_noise)
-#condnoise=LA.cond(H)   
-#covnoise=np.cov(H)
- 
+H=DLT3D(cam,worldpoints, imagepoints_noise)
+
+cond2=LA.cond(H)
+cam_center=camera_center(H)
+estimated_R,estimated_t=estimate_R_t(cam,H)
 
 
 covmatrix,imagecov=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints)
