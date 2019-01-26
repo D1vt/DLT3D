@@ -267,9 +267,9 @@ def a_b_c_from_Euler(Rt):
     return a,b,r
 
 #a function to calculate cov matrix . The equation for the final cov matrix (given in Thesis Tracking Errors in AR (eq. 5.8) = inv(np.dot(np.dot(JacT,image6points), Jac)), where JacT is the transpose matrix of Jacobian matrix (in spherical coordinates) 
-def covariance_matrix_p(K,Rt,worldpoints,imagepoints):
+def covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c):
     #calculate the a,b,c in spherical coord. 
-    a,b,c=a_b_c_from_Euler(Rt)
+   
     Jac,JacT=jacobian_matrix(a,b,c,K,worldpoints)
     
     #adding noise to imagePoints
@@ -411,10 +411,27 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      #print JacT 
     
      return Jac,JacT
-        
-   #na vrw prepei pws apokanonikopoiw 
-   #na brw to p για να εκτιμησω το σφαλμα γιατι απο π παιρνω το τζακομπιαν
-        
+ 
+def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
+   
+    best=2*math.pi
+    worst=best
+    mincond=10000000000000000000000000.0
+    maxcond=-10000000000000000000000000.0
+   
+ #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
+    #for a in np.arange(0.0,-(math.pi/2),-0.01):
+    for a in np.arange(0.0,(math.pi/2),0.01):
+        cov_mat,image6points=covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c)
+        if LA.cond(cov_mat)<mincond:
+            mincond=LA.cond(cov_mat)
+            best=a
+        if LA.cond(cov_mat)>maxcond:
+            maxcond=LA.cond(cov_mat)
+            worst=a
+    return worst,best
+
+   
 #values
 cam=Camera()
 set_K(cam,fx = 800,fy = 800,cx = 640,cy = 480)
@@ -451,5 +468,6 @@ cond2=LA.cond(H)
 cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H)
 
-
-covmatrix,imagecov=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints)
+a,b,c=a_b_c_from_Euler(cam.Rt)
+covmatrix,imagecov=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints,a,b,c)
+worst,best=calculate_best_a(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,c)
