@@ -297,7 +297,8 @@ def covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c):
     image6points=inv(image6points)
     #find the final 3*3 matrix
     cov_mat = inv(np.dot(np.dot(JacT,image6points), Jac))
-    return cov_mat,image6points
+    #print image6points
+    return cov_mat
 
 #here I calculate the R from Euler equations and also the following: dR/da , dR/db , dR/dc as I am going to use them to calculate the Jacobian Matrix 
 def R_Euler(a,b,c):
@@ -422,7 +423,7 @@ def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
     #for a in np.arange(0.0,-(math.pi/2),-0.01):
     for a in np.arange(0.0,(math.pi/2),0.01):
-        cov_mat,image6points=covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c)
+        cov_mat=covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c)
         if LA.cond(cov_mat)<mincond:
             mincond=LA.cond(cov_mat)
             best=a
@@ -469,5 +470,5 @@ cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H)
 
 a,b,c=a_b_c_from_Euler(cam.Rt)
-covmatrix,imagecov=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints,a,b,c)
+covmatrix=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints,a,b,c)
 worst,best=calculate_best_a(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,c)
