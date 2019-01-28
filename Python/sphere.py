@@ -341,13 +341,13 @@ def jacobian_matrix(a,b,c,K,worldpoints):
     
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
-                       [math.sin(a), 0, math.cos(a)]])
+                       [math.sin(a), 0., math.cos(a)]])
      
-     dR_da=np.array([ [math.cos(b)*(-math.sin(a)),0, math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
-                          [math.sin(b)*(-math.sin(a)), 0, math.sin(b)*math.cos(a)], #c*math.sin(b)*math.cos(a),
-                          [(-math.sin(a)), 0,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
+     dR_da=np.array([ [math.cos(b)*(-math.sin(a)),0., math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
+                          [math.sin(b)*(-math.sin(a)), 0., math.sin(b)*math.cos(a)], #c*math.sin(b)*math.cos(a),
+                          [(math.cos(a)), 0.,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
      dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
-                          [math.cos(b)*math.cos(a), (-math.sin(b)),(-math.sin(b))*math.sin(a)],
+                          [math.cos(b)*math.cos(a), (-math.sin(b)),(math.cos(b))*math.sin(a)],
                           [0., 0., 0.]])
      dR_dc=np.full((3,3),0.0) 
      R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc=R_Euler(0.0,np.deg2rad(180.0),0.0)
@@ -419,17 +419,21 @@ def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
     worst=best
     mincond=10000000000000000000000000.0
     maxcond=-10000000000000000000000000.0
-   
+    
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    #for a in np.arange(0.0,-(math.pi/2),-0.01):
-    for a in np.arange(0.0,(math.pi/2),0.01):
-        cov_mat=covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c)
-        if LA.cond(cov_mat)<mincond:
-            mincond=LA.cond(cov_mat)
+    #for a in np.arange(0.0,-(math.pi/2),-0.0001):
+    for a in np.arange(0.0,(math.pi/2),0.0001):
+        covmat=abs(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c))
+        cond=LA.cond(covmat)
+        if cond<mincond:
+            mincond=cond
+            print mincond , a
             best=a
-        if LA.cond(cov_mat)>maxcond:
-            maxcond=LA.cond(cov_mat)
+        if cond>maxcond:
+            maxcond=cond
+            #print maxcond,a
             worst=a
+        
     return worst,best
 
    
