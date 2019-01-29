@@ -230,18 +230,18 @@ def add_noise(imagepoints,sd=4.,mean=0., size=10000):
     imagenoise[1,5]=np.random.normal(mean,sd)+ imagepoints[1,5]
     return imagenoise
    else: 
-    px1=np.random.normal(mean,sd,size)+ imagepoints[0,0]
-    py1=np.random.normal(mean,sd,size)+ imagepoints[1,0]
-    px2=np.random.normal(mean,sd,size)+ imagepoints[0,1]
-    py2=np.random.normal(mean,sd,size)+ imagepoints[1,1]
-    px3=np.random.normal(mean,sd,size)+ imagepoints[0,2]
-    py3=np.random.normal(mean,sd,size)+ imagepoints[1,2]
-    px4=np.random.normal(mean,sd,size)+ imagepoints[0,3]
-    py4=np.random.normal(mean,sd,size)+ imagepoints[1,3]
-    px5=np.random.normal(mean,sd,size)+ imagepoints[0,4]
-    py5=np.random.normal(mean,sd,size)+ imagepoints[1,4]
-    px6=np.random.normal(mean,sd,size)+ imagepoints[0,5]
-    py6=np.random.normal(mean,sd,size)+ imagepoints[1,5]
+    px1=imagepoints[0,0] +np.random.normal(mean,sd,size)
+    py1=imagepoints[1,0] +np.random.normal(mean,sd,size)
+    px2=imagepoints[0,1] +np.random.normal(mean,sd,size)
+    py2=imagepoints[1,1] +np.random.normal(mean,sd,size)
+    px3=imagepoints[0,2] +np.random.normal(mean,sd,size)
+    py3=imagepoints[1,2] +np.random.normal(mean,sd,size)
+    px4=imagepoints[0,3] +np.random.normal(mean,sd,size)
+    py4=imagepoints[1,3] +np.random.normal(mean,sd,size)
+    px5=imagepoints[0,4] +np.random.normal(mean,sd,size)
+    py5=imagepoints[1,4] +np.random.normal(mean,sd,size)
+    px6=imagepoints[0,5] +np.random.normal(mean,sd,size)
+    py6=imagepoints[1,5] +np.random.normal(mean,sd,size)
     imageNoise=np.array([[px1,px2,px3,px4,px5,px6],
                         [py1,py2,py3,py4,py5,py6]])
     return imageNoise        
@@ -319,20 +319,21 @@ def R_Euler(a,b,c):
 
  
 #I am using this function to find the u&v of each point (p. 81-82 in "Tracking Errors in AI")      
-def jacobian_uv(X,P_da,P_db,P_dc):
+def jacobian_uv(X,P,P_da,P_db,P_dc):
      Y=np.array([[X[0]],
                 [X[1]],
                 [X[2]],
                 [1]]) 
+     image_points=np.dot(P,Y)
      image_point_da = np.dot(P_da,Y)
      image_point_db = np.dot(P_db,Y)
      image_point_dc = np.dot(P_dc,Y)
-     u_da=  image_point_da[0]/ image_point_da[2]
-     v_da=  image_point_da[1]/image_point_da[2]
-     u_db=image_point_db[0]/image_point_db[2]
-     v_db=image_point_db[1]/image_point_db[2]
-     u_dc=image_point_dc[0]/image_point_dc[2]
-     v_dc=image_point_dc[1]/image_point_dc[2]
+     u_da=  image_point_da[0]/ image_points[2]
+     v_da=  image_point_da[1]/image_points[2]
+     u_db=image_point_db[0]/image_points[2]
+     v_db=image_point_db[1]/image_points[2]
+     u_dc=image_point_dc[0]/image_points[2]
+     v_dc=image_point_dc[1]/image_points[2]
      return float(u_da),float(u_db),float(u_dc),float(v_da),float(v_db),float(v_dc) #2*3
  
         
@@ -351,9 +352,9 @@ def jacobian_matrix(a,b,c,K,worldpoints):
                           [0., 0., 0.]])
      dR_dc=np.full((3,3),0.0) 
      R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc=R_Euler(0.0,np.deg2rad(180.0),0.0)
-     R_Sphere_da=np.dot(dR_da,R_Eu)+np.dot(R_Sphere,dR_Euler_da)
-     R_Sphere_db=np.dot(dR_db,R_Eu)+np.dot(R_Sphere,dR_Euler_db)
-     R_Sphere_dc=np.dot(dR_dc,R_Eu)+np.dot(R_Sphere,dR_Euler_dc)
+     R_Sphere_da=np.dot(dR_da,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_da[:3,:3])
+     R_Sphere_db=np.dot(dR_db,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_db[:3,:3])
+     R_Sphere_dc=np.dot(dR_dc,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_dc[:3,:3])
      R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
      t_Sphere= np.array([[c*math.sin(a)*math.cos(b)],
             [c*math.sin(b)*math.sin(a)],
@@ -375,19 +376,20 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      dRt_da=np.hstack((R_Sphere_da, t_Sphere_da))
      dRt_db=np.hstack((R_Sphere_db, t_Sphere_db))
      dRt_dc=np.hstack((R_Sphere_dc, t_Sphere_dc))
-     
+     Rt_sphere=np.hstack((R_Sphere, t_Sphere))
      #I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in AR"
      P_da=np.dot(K,dRt_da)
      P_db=np.dot(K,dRt_db)
      P_dc=np.dot(K,dRt_dc)
+     P=np.dot(K,Rt_sphere)
       
      #then for each one of the world points I find the u,v and use them to calculate the Jacobian Matrix. So I need to calculate the followin for each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc
-     u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P_da,P_db,P_dc)
-     u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P_da,P_db,P_dc)
-     u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P_da,P_db,P_dc)
-     u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P_da,P_db,P_dc)
-     u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P_da,P_db,P_dc)
-     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P_da,P_db,P_dc)
+     u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P,P_da,P_db,P_dc)
+     u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P,P_da,P_db,P_dc)
+     u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P,P_da,P_db,P_dc)
+     u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P,P_da,P_db,P_dc)
+     u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P,P_da,P_db,P_dc)
+     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P,P_da,P_db,P_dc)
      
      #3*12 Jacobian.Transpose
     # JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,v3a,v4a,v5a,v6a],
@@ -421,11 +423,11 @@ def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
     maxcond=-10000000000000000000000000.0
     
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    #for a in np.arange(0.0,-(math.pi/2),-0.0001):
-    for a in np.arange(0.0,(math.pi/2),0.0001):
-        covmat=abs(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c))
+    for a in np.arange(0.0,-(math.pi/2),-0.0001):
+    #for a in np.arange(0.0,(math.pi/2),0.0001):
+        covmat=(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c))
         cond=LA.cond(covmat)
-        if cond<mincond:
+        if int(cond)<=mincond:
             mincond=cond
             print mincond , a
             best=a
