@@ -1,13 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jan 17 15:59:45 2019
-@author: diana
-"""
-
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
 Created on Sat Jan  5 15:41:33 2019
 /
 @author: diana
@@ -20,6 +13,7 @@ from scipy.linalg import expm, inv
 import math
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
+import sys
 
 
 class Camera(object):
@@ -342,15 +336,15 @@ def jacobian_matrix(a,b,c,K,worldpoints):
     
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
-                       [math.sin(a), 0., math.cos(a)]])
+                       [-math.sin(a), 0., math.cos(a)]])
      
      dR_da=np.array([ [math.cos(b)*(-math.sin(a)),0., math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
                           [math.sin(b)*(-math.sin(a)), 0., math.sin(b)*math.cos(a)], #c*math.sin(b)*math.cos(a),
-                          [(math.cos(a)), 0.,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
+                          [-(math.cos(a)), 0.,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
      dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
                           [math.cos(b)*math.cos(a), (-math.sin(b)),(math.cos(b))*math.sin(a)],
                           [0., 0., 0.]])
-     dR_dc=np.full((3,3),0.0) 
+     dR_dc=np.full((3,3),0.) 
      R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc=R_Euler(0.0,np.deg2rad(180.0),0.0)
      R_Sphere_da=np.dot(dR_da,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_da[:3,:3])
      R_Sphere_db=np.dot(dR_db,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_db[:3,:3])
@@ -386,10 +380,11 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      #then for each one of the world points I find the u,v and use them to calculate the Jacobian Matrix. So I need to calculate the followin for each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc
      u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P,P_da,P_db,P_dc)
      u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P,P_da,P_db,P_dc)
+     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P,P_da,P_db,P_dc)
      u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P,P_da,P_db,P_dc)
      u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P,P_da,P_db,P_dc)
      u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P,P_da,P_db,P_dc)
-     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P,P_da,P_db,P_dc)
+    
      
      #3*12 Jacobian.Transpose
     # JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,v3a,v4a,v5a,v6a],
@@ -416,7 +411,7 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      return Jac,JacT
  
 def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
-   
+   #1.57079632679
     best=2*math.pi
     worst=best
     mincond=10000000000000000000000000.0
@@ -427,14 +422,16 @@ def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
     #for a in np.arange(0.0,(math.pi/2),0.0001):
         covmat=(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c))
         cond=LA.cond(covmat)
+        #if a<= -1.5:
+         #   print cond , "και", a
         if int(cond)<=mincond:
             mincond=cond
-            print mincond , a
-            best=a
-        if cond>maxcond:
+            print mincond , math.degrees(a)
+            best=math.degrees(a)
+        if int(cond)>maxcond:
             maxcond=cond
             #print maxcond,a
-            worst=a
+            worst=math.degrees(a)
         
     return worst,best
 
@@ -471,7 +468,6 @@ print cam.t
 #NoiseTest
 H=DLT3D(cam,worldpoints, imagepoints_noise)
 
-cond2=LA.cond(H)
 cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H)
 
