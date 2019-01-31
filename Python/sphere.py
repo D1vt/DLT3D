@@ -336,11 +336,11 @@ def jacobian_matrix(a,b,c,K,worldpoints):
     
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
-                       [-math.sin(a), 0., math.cos(a)]])
+                       [math.sin(a), 0., math.cos(a)]])
      
      dR_da=np.array([ [math.cos(b)*(-math.sin(a)),0., math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
                           [math.sin(b)*(-math.sin(a)), 0., math.sin(b)*math.cos(a)], #c*math.sin(b)*math.cos(a),
-                          [-(math.cos(a)), 0.,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
+                          [(math.cos(a)), 0.,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
      dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
                           [math.cos(b)*math.cos(a), (-math.sin(b)),(math.cos(b))*math.sin(a)],
                           [0., 0., 0.]])
@@ -414,26 +414,46 @@ def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
    #1.57079632679
     best=2*math.pi
     worst=best
-    mincond=10000000000000000000000000.0
-    maxcond=-10000000000000000000000000.0
+    mincond=1000000000.
+    maxcond=-1
     
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    for a in np.arange(0.0,-(math.pi/2),-0.0001):
-    #for a in np.arange(0.0,(math.pi/2),0.0001):
+    #for a in np.arange(0.0,-(math.pi/2),-0.0001):
+    for a in np.arange(0.0,(math.pi/2),0.0001):
         covmat=(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c))
         cond=LA.cond(covmat)
         #if a<= -1.5:
          #   print cond , "και", a
         if int(cond)<=mincond:
             mincond=cond
-            print mincond , math.degrees(a)
+            #print mincond , math.degrees(a)
             best=math.degrees(a)
-        if int(cond)>maxcond:
+        if cond>maxcond:
             maxcond=cond
-            #print maxcond,a
+            print maxcond, math.degrees(a)
             worst=math.degrees(a)
         
     return worst,best
+
+
+def calculate_best_r(Rt,K,worldpoints,imagepoints,b,a):
+   #1.57079632679
+    best=-1.
+    mincond=1000000000.
+    
+    
+ #r>0 so I tested many cases after 1 worst
+    for r in np.arange(0.,60.,0.1):
+        covmat=(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,r))
+        cond=LA.cond(covmat)
+        print cond , r
+        if int(cond)<=mincond:
+            mincond=cond
+            
+            best=r
+       
+        
+    return best
 
    
 #values
@@ -473,4 +493,5 @@ estimated_R,estimated_t=estimate_R_t(cam,H)
 
 a,b,c=a_b_c_from_Euler(cam.Rt)
 covmatrix=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints,a,b,c)
-worst,best=calculate_best_a(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,c)
+#worst,best=calculate_best_a(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,c)
+rbest=calculate_best_r(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,a)
