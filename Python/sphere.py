@@ -13,7 +13,11 @@ from scipy.linalg import expm, inv
 import math
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
-import sys
+import csv
+with open('dataA.csv', 'w') as csvfile:
+          filewriter = csv.writer(csvfile, delimiter=' ')
+with open('dataR.csv', 'w') as csvfile:
+          filewriter = csv.writer(csvfile, delimiter=' ')          
 
 
 class Camera(object):
@@ -46,9 +50,9 @@ def set_K(self, fx = 1, fy = 1, cx = 0,cy = 0):
         self.fy = fy
         self.cx = cx
         self.cy = cy
-        self.K = np.mat([[fx, 0, cx],
-                      [0,fy,cy],
-                      [0,0,1.]], dtype=np.float32)
+        self.K = np.mat([[fx, 0., cx],
+                      [0.,fy,cy],
+                      [0.,0.,1.]], dtype=np.float32)
         set_P(cam)
 
 
@@ -70,7 +74,7 @@ def set_R_axisAngle(self,x,y,z, alpha):
         a = a / np.linalg.norm(a)
 
         #Build the skew symetric
-        a_skew = np.mat([[0,-a[2],a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
+        a_skew = np.mat([[0,-a[2],a[1]], [a[2], 0., -a[0]], [-a[1], a[0], 0.]])
         R = np.eye(4)
         R[:3,:3] = expm(a_skew*alpha)
         self.R = R
@@ -86,7 +90,7 @@ def set_t(self, x,y,z, frame = 'camera'):
         #self.t = array([[x],[y],[z]])
         self.t = np.eye(4)
         if frame=='world':
-          cam_world = np.array([x,y,z,1]).T
+          cam_world = np.array([x,y,z,1.]).T
           cam_t = np.dot(self.R,-cam_world)
           self.t[:3,3] = cam_t[:3]
         else:
@@ -96,7 +100,7 @@ def set_t(self, x,y,z, frame = 'camera'):
 
 
 def get_world_position(self):
-        t = np.dot(inv(cam.Rt), np.array([0,0,0,1]))
+        t = np.dot(inv(cam.Rt), np.array([0.,0.,0.,1.]))
         return t
 
 
@@ -244,8 +248,8 @@ def add_noise(imagepoints,sd=4.,mean=0., size=10000):
   ### here we solve the problem using spherical coordinates and Euler angles
 
 #calculate the a,b,c 
-def a_b_c_from_Euler(Rt):
-    world_position = get_world_position(Rt)  
+def a_b_c_from_Euler(self):
+    world_position = get_world_position(self.Rt)  
     x = world_position[0]
     y = world_position[1]
     z = world_position[2]
@@ -261,10 +265,10 @@ def a_b_c_from_Euler(Rt):
     return a,b,r
 
 #a function to calculate cov matrix . The equation for the final cov matrix (given in Thesis Tracking Errors in AR (eq. 5.8) = inv(np.dot(np.dot(JacT,image6points), Jac)), where JacT is the transpose matrix of Jacobian matrix (in spherical coordinates) 
-def covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c):
+def covariance_matrix_p(self,worldpoints,imagepoints,a,b,c):
     #calculate the a,b,c in spherical coord. 
    
-    Jac,JacT=jacobian_matrix(a,b,c,K,worldpoints)
+    Jac,JacT=jacobian_matrix(self,a,b,c,worldpoints)
     
     #adding noise to imagePoints
     points=add_noise(imagepoints)
@@ -289,6 +293,7 @@ def covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c):
     image6points=np.diag(np.diag( image6points))
     #the eq. 5.8 uses the inv. cov. matrix of those points
     image6points=inv(image6points)
+   
     #find the final 3*3 matrix
     cov_mat = inv(np.dot(np.dot(JacT,image6points), Jac))
     #print image6points
@@ -317,8 +322,10 @@ def jacobian_uv(X,P,P_da,P_db,P_dc):
      Y=np.array([[X[0]],
                 [X[1]],
                 [X[2]],
-                [1]]) 
+                [1.]])
+     
      image_points=np.dot(P,Y)
+     
      image_point_da = np.dot(P_da,Y)
      image_point_db = np.dot(P_db,Y)
      image_point_dc = np.dot(P_dc,Y)
@@ -332,7 +339,7 @@ def jacobian_uv(X,P,P_da,P_db,P_dc):
  
         
 #here I calculate Jacobian matrix and transpose of the Jacobian matrix. As I have to calculate the Jacobian Matrix I need to calculate the following: dR/da, dR/db,dR/dc , dt/da , dt/db, dt/dc 
-def jacobian_matrix(a,b,c,K,worldpoints):
+def jacobian_matrix(self,a,b,c,worldpoints):
     
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
@@ -372,10 +379,10 @@ def jacobian_matrix(a,b,c,K,worldpoints):
      dRt_dc=np.hstack((R_Sphere_dc, t_Sphere_dc))
      Rt_sphere=np.hstack((R_Sphere, t_Sphere))
      #I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in AR"
-     P_da=np.dot(K,dRt_da)
-     P_db=np.dot(K,dRt_db)
-     P_dc=np.dot(K,dRt_dc)
-     P=np.dot(K,Rt_sphere)
+     P_da=np.dot(self.K,dRt_da)
+     P_db=np.dot(self.K,dRt_db)
+     P_dc=np.dot(self.K,dRt_dc)
+     P=np.dot(self.K,Rt_sphere)
       
      #then for each one of the world points I find the u,v and use them to calculate the Jacobian Matrix. So I need to calculate the followin for each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc
      u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P,P_da,P_db,P_dc)
@@ -410,7 +417,7 @@ def jacobian_matrix(a,b,c,K,worldpoints):
     
      return Jac,JacT
  
-def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
+def calculate_best_a(self,worldpoints,imagepoints,b,c):
    #1.57079632679
     best=2*math.pi
     worst=best
@@ -418,35 +425,39 @@ def calculate_best_a(Rt,K,worldpoints,imagepoints,b,c):
     maxcond=-1
     
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    #for a in np.arange(0.0,-(math.pi/2),-0.0001):
-    for a in np.arange(0.0,(math.pi/2),0.0001):
-        covmat=(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,c))
+    for a in np.arange(0.0,-(math.pi/2)-0.01,-0.01):
+    #for a in np.arange(0.0,(math.pi/2)+0.01,0.01):
+    
+        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,c))
         cond=LA.cond(covmat)
-        #if a<= -1.5:
-         #   print cond , "και", a
-        if int(cond)<=mincond:
+        with open('dataA.csv', 'ab') as csvfile:
+          filewriter = csv.writer(csvfile, delimiter=' ')
+          filewriter.writerow([cond , math.degrees(a)])
+          
+        if cond<mincond:
             mincond=cond
-            #print mincond , math.degrees(a)
             best=math.degrees(a)
         if cond>maxcond:
             maxcond=cond
-            print maxcond, math.degrees(a)
             worst=math.degrees(a)
         
     return worst,best
 
 
-def calculate_best_r(Rt,K,worldpoints,imagepoints,b,a):
+def calculate_best_r(self,worldpoints,imagepoints,b,a):
    #1.57079632679
     best=-1.
     mincond=1000000000.
     
     
  #r>0 so I tested many cases after 1 worst
-    for r in np.arange(0.,60.,0.1):
-        covmat=(covariance_matrix_p(K,Rt,worldpoints,imagepoints,a,b,r))
+    for r in np.arange(0.,100.,0.1):
+        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
-        print cond , r
+        with open('dataR.csv', 'ab') as csvfile:
+          filewriter = csv.writer(csvfile, delimiter=' ')
+          filewriter.writerow([cond , r])
+      
         if int(cond)<=mincond:
             mincond=cond
             
@@ -465,13 +476,12 @@ set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
 set_t(cam,0.0,-0.0,0.5, frame='world')
 #worldpoints = spherepoints(6)
 #testpoints
-worldpoints = np.array([[-0.206674, 0.240009,-0.29203,1.],
-                        [0.091502,-0.144823,	0.0323819,1.],
-                        [0.371293,	-0.458251	,0.269246,1.],
-                        [-0.864962	,0.222202	,0.0354375,1.],
-                        [-0.211795	,0.418585	,0.491078,1.],
-                        [-0.134308	,0.69774,	-0.773798,1.]])
-worldpoints=np.transpose(worldpoints)
+worldpoints= np.array([[-0.0857406, -0.423167,	0.170105,	 0.32051,	 0.511078,	0.648625],
+[-0.603913,	-0.144078,	-0.354525,	-0.411165,	-0.417735,	-0.38116],
+[-0.26259,	 0.0339388	,-0.370209	,0.00945364,	-0.122987,	0.88183],
+[1.,	1.,	1.,	1.,	1.,	1.]])
+
+
 
 imagePoints= project(cam,worldpoints, False)
 imagepoints_noise=add_noise(imagePoints,2,0,0)
@@ -491,7 +501,10 @@ H=DLT3D(cam,worldpoints, imagepoints_noise)
 cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H)
 
-a,b,c=a_b_c_from_Euler(cam.Rt)
-covmatrix=covariance_matrix_p(cam.K,cam.Rt,np.transpose(worldpoints),imagePoints,a,b,c)
-#worst,best=calculate_best_a(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,c)
-rbest=calculate_best_r(cam.Rt,cam.K,np.transpose(worldpoints),imagePoints,b,a)
+a,b,c=a_b_c_from_Euler(cam)
+#a=0
+#b=0
+#c=0
+covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,c)
+worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,c)
+rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
