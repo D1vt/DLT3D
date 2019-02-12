@@ -11,6 +11,7 @@ from random import randrange
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
+import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import csv
@@ -425,9 +426,8 @@ def calculate_best_a(self,worldpoints,imagepoints,b,c):
     maxcond=-1
     
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    for a in np.arange(0.0,-(math.pi/2)-0.01,-0.01):
-    #for a in np.arange(0.0,(math.pi/2)+0.01,0.01):
-    
+    for a in np.arange(-(math.pi/2), (math.pi/2 + 0.01),0.01):
+ 
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,c))
         cond=LA.cond(covmat)
         with open('dataA.csv', 'ab') as csvfile:
@@ -440,7 +440,21 @@ def calculate_best_a(self,worldpoints,imagepoints,b,c):
         if cond>maxcond:
             maxcond=cond
             worst=math.degrees(a)
-        
+    x = []
+    y = []
+    with open('dataA.csv','r') as csvfile:
+         plots = csv.reader(csvfile, delimiter=' ')
+         for column in plots:
+          x.append((float(column[1])))
+          y.append(float(column[0]))
+
+         plt.plot(x,y,'+', label='Loaded from file!')
+         plt.xlabel('a angle')
+         plt.ylabel('condition number')
+         plt.title('Relationship between a angle &Condition number of cov. matrix')
+         #plt.legend()
+         plt.show()
+    
     return worst,best
 
 
@@ -448,10 +462,10 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
    #1.57079632679
     best=-1.
     mincond=1000000000.
-    
-    
+    #covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,0.9))
+    #condmax=LA.cond(covmat)
  #r>0 so I tested many cases after 1 worst
-    for r in np.arange(0.,100.,0.1):
+    for r in np.arange(0.,90.,10.):
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
         with open('dataR.csv', 'ab') as csvfile:
@@ -462,7 +476,22 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
             mincond=cond
             
             best=r
-       
+    x = []
+    y = []
+    with open('dataR.csv','r') as csvfile:
+         plots = csv.reader(csvfile, delimiter=' ')
+         for column in plots:
+          x.append((float(column[1])))
+          y.append((float(column[0])))
+
+         plt.plot(x,y, '.', label='Loaded from file!')
+         plt.xlabel('r distance')
+         plt.ylabel('condition number')
+         plt.title('Relationship between distance&Condition number of cov. matrix')
+         plt.legend()
+         plt.show()
+
+
         
     return best
 
