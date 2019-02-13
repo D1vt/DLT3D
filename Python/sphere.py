@@ -115,6 +115,7 @@ def project(self,X, quant_error=False):
             x = np.around(x, decimals=0)
         return x
 
+
 def spherepoints(points):
     worldpoints = np.random.randn(points, 3)
     worldpoints /= np.linalg.norm(worldpoints, axis=0)
@@ -123,10 +124,12 @@ def spherepoints(points):
     x = np.outer(np.sin(theta), np.cos(phi))
     y = np.outer(np.sin(theta), np.sin(phi))
     z = np.outer(np.cos(theta), np.ones_like(phi))
-    fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d', 'aspect':'equal'})
-    ax.plot_wireframe(x, y, z, color='k', rstride=1, cstride=1)
+    fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d'})
+    ax.plot_wireframe(x, y, z, color='g')
     worldpoints=np.transpose(worldpoints)
-    ax.scatter(worldpoints[0,:], worldpoints[1,:], worldpoints[2,:], s=100, c='r', zorder=10) 
+    ax.scatter(worldpoints[:,1],worldpoints[:,2],worldpoints[:,3],s=70, c='r') 
+    ax.scatter(worldpoints[:,0],worldpoints[:,4],worldpoints[:,5],s=70, c='r') 
+    plt.show()
     worldpoints=np.vstack((worldpoints,[1.0,1.0,1.0,1.0,1.0,1.0]))
     return worldpoints
 
@@ -249,7 +252,7 @@ def add_noise(imagepoints,sd=4.,mean=0., size=10000):
   ### here we solve the problem using spherical coordinates and Euler angles
 
 #calculate the a,b,c 
-def a_b_c_from_Euler(self):
+def a_b_r_spherical(self):
     world_position = get_world_position(self.Rt)  
     x = world_position[0]
     y = world_position[1]
@@ -305,16 +308,17 @@ def R_Euler(a,b,c):
     R_Eu= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
                        [math.cos(c)*math.sin(a)+math.cos(a)*math.cos(b)*math.sin(c), math.cos(a)*math.cos(b)*math.cos(c)-math.sin(a)*math.sin(c), -math.cos(a)*math.sin(b)],
                        [math.sin(b)*math.sin(c), math.cos(c)*math.sin(b), math.cos(b)]])
-    dR_Euler_da=np.array([[(-math.sin(a))*math.cos(c) - math.cos(b)*math.cos(a)*math.sin(c), (math.sin(a))*math.sin(c)-math.cos(b)*math.cos(c)*math.cos(a), math.cos(a)*math.sin(b)],
-                       [math.cos(c)*math.cos(a)+(-math.sin(a))*math.cos(b)*math.sin(c), (-math.sin(a))*math.cos(b)*math.cos(c)-math.cos(a)*math.sin(c), math.sin(a)*math.sin(b)],
-                       [0., 0.,0.]])
-    dR_Euler_db=np.array([[math.sin(b)*math.sin(a)*math.sin(c), math.sin(b)*math.cos(c)*math.sin(a), math.sin(a)*math.cos(b)],
-                       [math.cos(a)*(-math.sin(b))*math.sin(c), math.cos(a)*(-math.sin(b))*math.cos(c), -math.cos(a)*math.cos(b)],
-                       [math.cos(b)*math.sin(c), math.cos(c)*math.cos(b), (-math.sin(b))]])
-    dR_Euler_dc=np.array([[math.cos(a)*(-math.sin(c)) - math.cos(b)*math.sin(a)*math.cos(c), -math.cos(a)*math.cos(c)-math.cos(b)*(-math.sin(c))*math.sin(a),0.],
-                       [(-math.sin(c))*math.sin(a)+math.cos(a)*math.cos(b)*math.cos(c), math.cos(a)*math.cos(b)*(-math.sin(c))-math.sin(a)*math.cos(c), 0.],
-                       [math.sin(b)*math.cos(c), (-math.sin(c))*math.sin(b), 0.]])
-    return R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc
+    #dR_Euler_da=np.array([[(-math.sin(a))*math.cos(c) - math.cos(b)*math.cos(a)*math.sin(c), (math.sin(a))*math.sin(c)-math.cos(b)*math.cos(c)*math.cos(a), math.cos(a)*math.sin(b)],
+        #               [math.cos(c)*math.cos(a)+(-math.sin(a))*math.cos(b)*math.sin(c), (-math.sin(a))*math.cos(b)*math.cos(c)-math.cos(a)*math.sin(c), math.sin(a)*math.sin(b)],
+       #                [0., 0.,0.]])
+    #dR_Euler_db=np.array([[math.sin(b)*math.sin(a)*math.sin(c), math.sin(b)*math.cos(c)*math.sin(a), math.sin(a)*math.cos(b)],
+     #                  [math.cos(a)*(-math.sin(b))*math.sin(c), math.cos(a)*(-math.sin(b))*math.cos(c), -math.cos(a)*math.cos(b)],
+      #                 [math.cos(b)*math.sin(c), math.cos(c)*math.cos(b), (-math.sin(b))]])
+    #dR_Euler_dc=np.array([[math.cos(a)*(-math.sin(c)) - math.cos(b)*math.sin(a)*math.cos(c), -math.cos(a)*math.cos(c)-math.cos(b)*(-math.sin(c))*math.sin(a),0.],
+                     #  [(-math.sin(c))*math.sin(a)+math.cos(a)*math.cos(b)*math.cos(c), math.cos(a)*math.cos(b)*(-math.sin(c))-math.sin(a)*math.cos(c), 0.],
+                      # [math.sin(b)*math.cos(c), (-math.sin(c))*math.sin(b), 0.]])
+    #dR_Euler_dc=np.full((3,3),0.0)
+    return R_Eu
 
 
  
@@ -340,7 +344,7 @@ def jacobian_uv(X,P,P_da,P_db,P_dc):
  
         
 #here I calculate Jacobian matrix and transpose of the Jacobian matrix. As I have to calculate the Jacobian Matrix I need to calculate the following: dR/da, dR/db,dR/dc , dt/da , dt/db, dt/dc 
-def jacobian_matrix(self,a,b,c,worldpoints):
+def jacobian_matrix(self,a,b,r,worldpoints):
     
      R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
@@ -352,46 +356,46 @@ def jacobian_matrix(self,a,b,c,worldpoints):
      dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
                           [math.cos(b)*math.cos(a), (-math.sin(b)),(math.cos(b))*math.sin(a)],
                           [0., 0., 0.]])
-     dR_dc=np.full((3,3),0.) 
-     R_Eu,dR_Euler_da,dR_Euler_db,dR_Euler_dc=R_Euler(0.0,np.deg2rad(180.0),0.0)
-     R_Sphere_da=np.dot(dR_da,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_da[:3,:3])
-     R_Sphere_db=np.dot(dR_db,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_db[:3,:3])
-     R_Sphere_dc=np.dot(dR_dc,R_Eu[:3,:3])+np.dot(R_Sphere,dR_Euler_dc[:3,:3])
+     dR_dr=np.full((3,3),0.) 
+     R_Eu=R_Euler(0.0,np.deg2rad(180.0),0.0)
+     R_Sphere_da=np.dot(dR_da,R_Eu[:3,:3])
+     R_Sphere_db=np.dot(dR_db,R_Eu[:3,:3])
+     R_Sphere_dr=np.dot(dR_dr,R_Eu[:3,:3])
      R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
-     t_Sphere= np.array([[c*math.sin(a)*math.cos(b)],
-            [c*math.sin(b)*math.sin(a)],
-             [c*math.cos(a)]])
-     t_da=np.array([[c*math.cos(a)*math.cos(b)],
-            [c*math.sin(b)*math.cos(a)],
-             [c*(-math.sin(a))]])
-     t_db=np.array([[c*math.sin(a)*(-math.sin(b))],
-            [c*math.cos(b)*math.sin(a)],
+     t_Sphere= np.array([[r*math.sin(a)*math.cos(b)],
+            [r*math.sin(b)*math.sin(a)],
+             [r*math.cos(a)]])
+     t_da=np.array([[r*math.cos(a)*math.cos(b)],
+            [r*math.sin(b)*math.cos(a)],
+             [r*(-math.sin(a))]])
+     t_db=np.array([[r*math.sin(a)*(-math.sin(b))],
+            [r*math.cos(b)*math.sin(a)],
              [0.]])
-     t_dc=np.array([[math.sin(a)*math.cos(b)],
+     t_dr=np.array([[math.sin(a)*math.cos(b)],
             [math.sin(b)*math.sin(a)],
              [math.cos(a)]])
      t_Sphere_da=np.dot(R_Sphere_da, -t_Sphere)+np.dot(R_Sphere, -t_da)
      t_Sphere_db=np.dot(R_Sphere_db, -t_Sphere)+np.dot(R_Sphere, -t_db)
-     t_Sphere_dc=np.dot(R_Sphere_dc, -t_Sphere)+np.dot(R_Sphere, -t_dc)
+     t_Sphere_dr=np.dot(R_Sphere_dr, -t_Sphere)+np.dot(R_Sphere, -t_dr)
      t_Sphere=np.dot(R_Sphere,-t_Sphere)
      #then I am using them to find the following: dRt/da , dRt/db, dRt/dc where a,b,c were calculated in a previous function
      dRt_da=np.hstack((R_Sphere_da, t_Sphere_da))
      dRt_db=np.hstack((R_Sphere_db, t_Sphere_db))
-     dRt_dc=np.hstack((R_Sphere_dc, t_Sphere_dc))
+     dRt_dr=np.hstack((R_Sphere_dr, t_Sphere_dr))
      Rt_sphere=np.hstack((R_Sphere, t_Sphere))
      #I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in AR"
      P_da=np.dot(self.K,dRt_da)
      P_db=np.dot(self.K,dRt_db)
-     P_dc=np.dot(self.K,dRt_dc)
+     P_dr=np.dot(self.K,dRt_dr)
      P=np.dot(self.K,Rt_sphere)
       
      #then for each one of the world points I find the u,v and use them to calculate the Jacobian Matrix. So I need to calculate the followin for each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc
-     u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P,P_da,P_db,P_dc)
-     u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P,P_da,P_db,P_dc)
-     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P,P_da,P_db,P_dc)
-     u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P,P_da,P_db,P_dc)
-     u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P,P_da,P_db,P_dc)
-     u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P,P_da,P_db,P_dc)
+     u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P,P_da,P_db,P_dr)
+     u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P,P_da,P_db,P_dr)
+     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P,P_da,P_db,P_dr)
+     u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P,P_da,P_db,P_dr)
+     u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P,P_da,P_db,P_dr)
+     u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P,P_da,P_db,P_dr)
     
      
      #3*12 Jacobian.Transpose
@@ -418,7 +422,7 @@ def jacobian_matrix(self,a,b,c,worldpoints):
     
      return Jac,JacT
  
-def calculate_best_a(self,worldpoints,imagepoints,b,c):
+def calculate_best_a(self,worldpoints,imagepoints,b,r):
    #1.57079632679
     best=2*math.pi
     worst=best
@@ -426,9 +430,9 @@ def calculate_best_a(self,worldpoints,imagepoints,b,c):
     maxcond=-1
     
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    for a in np.arange(-(math.pi/2), (math.pi/2 + 0.01),0.01):
+    for a in np.arange(-np.deg2rad(90.0), (np.deg2rad(90.)),0.04):
  
-        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,c))
+        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
         with open('dataA.csv', 'ab') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')
@@ -448,11 +452,11 @@ def calculate_best_a(self,worldpoints,imagepoints,b,c):
           x.append((float(column[1])))
           y.append(float(column[0]))
 
-         plt.plot(x,y,'+', label='Loaded from file!')
+         plt.plot(x,y, label='Loaded from file!')
          plt.xlabel('a angle')
          plt.ylabel('condition number')
          plt.title('Relationship between a angle &Condition number of cov. matrix')
-         #plt.legend()
+         plt.legend()
          plt.show()
     
     return worst,best
@@ -462,15 +466,15 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
    #1.57079632679
     best=-1.
     mincond=1000000000.
-    #covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,0.9))
-    #condmax=LA.cond(covmat)
+    covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,100))
+    condmax=LA.cond(covmat)
  #r>0 so I tested many cases after 1 worst
-    for r in np.arange(0.,90.,10.):
+    for r in np.arange(0.0,110,10):
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
         with open('dataR.csv', 'ab') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')
-          filewriter.writerow([cond , r])
+          filewriter.writerow([float(cond)/condmax , r/100.])
       
         if int(cond)<=mincond:
             mincond=cond
@@ -484,7 +488,7 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
           x.append((float(column[1])))
           y.append((float(column[0])))
 
-         plt.plot(x,y, '.', label='Loaded from file!')
+         plt.plot(x,y, label='Loaded from file!')
          plt.xlabel('r distance')
          plt.ylabel('condition number')
          plt.title('Relationship between distance&Condition number of cov. matrix')
@@ -530,10 +534,10 @@ H=DLT3D(cam,worldpoints, imagepoints_noise)
 cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H)
 
-a,b,c=a_b_c_from_Euler(cam)
+a,b,r=a_b_r_spherical(cam)
 #a=0
 #b=0
 #c=0
-covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,c)
-worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,c)
+covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
+worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
 rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
