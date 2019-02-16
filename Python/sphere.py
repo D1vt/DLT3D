@@ -305,19 +305,14 @@ def covariance_matrix_p(self,worldpoints,imagepoints,a,b,c):
 
 #here I calculate the R from Euler equations and also the following: dR/da , dR/db , dR/dc as I am going to use them to calculate the Jacobian Matrix 
 def R_Euler(a,b,c):
-    R_Eu= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c), -math.cos(a)*math.sin(c)-math.cos(b)*math.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
-                       [math.cos(c)*math.sin(a)+math.cos(a)*math.cos(b)*math.sin(c), math.cos(a)*math.cos(b)*math.cos(c)-math.sin(a)*math.sin(c), -math.cos(a)*math.sin(b)],
-                       [math.sin(b)*math.sin(c), math.cos(c)*math.sin(b), math.cos(b)]])
-    #dR_Euler_da=np.array([[(-math.sin(a))*math.cos(c) - math.cos(b)*math.cos(a)*math.sin(c), (math.sin(a))*math.sin(c)-math.cos(b)*math.cos(c)*math.cos(a), math.cos(a)*math.sin(b)],
-        #               [math.cos(c)*math.cos(a)+(-math.sin(a))*math.cos(b)*math.sin(c), (-math.sin(a))*math.cos(b)*math.cos(c)-math.cos(a)*math.sin(c), math.sin(a)*math.sin(b)],
-       #                [0., 0.,0.]])
-    #dR_Euler_db=np.array([[math.sin(b)*math.sin(a)*math.sin(c), math.sin(b)*math.cos(c)*math.sin(a), math.sin(a)*math.cos(b)],
-     #                  [math.cos(a)*(-math.sin(b))*math.sin(c), math.cos(a)*(-math.sin(b))*math.cos(c), -math.cos(a)*math.cos(b)],
-      #                 [math.cos(b)*math.sin(c), math.cos(c)*math.cos(b), (-math.sin(b))]])
-    #dR_Euler_dc=np.array([[math.cos(a)*(-math.sin(c)) - math.cos(b)*math.sin(a)*math.cos(c), -math.cos(a)*math.cos(c)-math.cos(b)*(-math.sin(c))*math.sin(a),0.],
-                     #  [(-math.sin(c))*math.sin(a)+math.cos(a)*math.cos(b)*math.cos(c), math.cos(a)*math.cos(b)*(-math.sin(c))-math.sin(a)*math.cos(c), 0.],
-                      # [math.sin(b)*math.cos(c), (-math.sin(c))*math.sin(b), 0.]])
-    #dR_Euler_dc=np.full((3,3),0.0)
+    #a=math.atan(cam.R[2,1]/cam.R[2,2])
+    #b=-math.atan(-cam.R[2,0]/math.sqrt((cam.R[2,1]*cam.R[2,1])+cam.R[2,2]*cam.R[2,2]))
+    #c=math.atan(cam.R[1,0]/cam.R[0,0])
+    #print a,b,c
+    R_Eu= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c),-math.cos(a)*math.sin(c) - math.cos(b)*np.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
+                       [math.cos(c)*math.sin(a) + math.cos(a)*math.cos(b)*math.sin(c),math.cos(a)*math.cos(b)*math.cos(c) - math.sin(a)*math.sin(c),  -math.cos(a)*math.sin(b)],
+                       [ math.sin(b)*math.sin(c),math.cos(c)*math.sin(b),math.cos(b)]])
+   
     return R_Eu
 
 
@@ -329,17 +324,17 @@ def jacobian_uv(X,P,P_da,P_db,P_dc):
                 [X[2]],
                 [1.]])
      
-     image_points=np.dot(P,Y)
+     #image_points=np.dot(P,Y)
      
      image_point_da = np.dot(P_da,Y)
      image_point_db = np.dot(P_db,Y)
      image_point_dc = np.dot(P_dc,Y)
-     u_da=  image_point_da[0]/ image_points[2]
-     v_da=  image_point_da[1]/image_points[2]
-     u_db=image_point_db[0]/image_points[2]
-     v_db=image_point_db[1]/image_points[2]
-     u_dc=image_point_dc[0]/image_points[2]
-     v_dc=image_point_dc[1]/image_points[2]
+     u_da=  image_point_da[0] #/ image_points[2]
+     v_da=  image_point_da[1] #/image_points[2]
+     u_db=image_point_db[0] #/image_points[2]
+     v_db=image_point_db[1] #/image_points[2]
+     u_dc=image_point_dc[0] #/image_points[2]
+     v_dc=image_point_dc[1] #/image_points[2]
      return float(u_da),float(u_db),float(u_dc),float(v_da),float(v_db),float(v_dc) #2*3
  
         
@@ -350,7 +345,7 @@ def jacobian_matrix(self,a,b,r,worldpoints):
                        [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
                        [math.sin(a), 0., math.cos(a)]])
      
-     dR_da=np.array([ [math.cos(b)*(-math.sin(a)),0., math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
+     dR_da=np.array([[math.cos(b)*(-math.sin(a)),0., math.cos(b)*math.cos(a)], #,c*(-math.cos(a))*math.cos(b),
                           [math.sin(b)*(-math.sin(a)), 0., math.sin(b)*math.cos(a)], #c*math.sin(b)*math.cos(a),
                           [(math.cos(a)), 0.,(-math.sin(a))] ]) #,c*(-math.sin(a))]])
      dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
@@ -401,7 +396,7 @@ def jacobian_matrix(self,a,b,r,worldpoints):
      #3*12 Jacobian.Transpose
     # JacT=np.array([[u1a,u2a,u3a,u4a,u5a,u6a,v1a,v2a,v3a,v4a,v5a,v6a],
                 #   [u1b,u2b,u3b,u4b,u5b,u6b,v1b,v2b,v3b,v4b,v5b,v6b],
-                 #  [u1c,u2c,u3c,u4c,u5c,u6c,v1c,v2c,v3c,v4c,v5c,v6c]])
+                 #  [u1c,u2c,u3c,u4c,u5c,u6c,v1c,v2c,v3c,v4c,v5c,v6c]])/
      
     
      #12*3 Jacobian Matrix
@@ -430,20 +425,20 @@ def calculate_best_a(self,worldpoints,imagepoints,b,r):
     maxcond=-1
     
  #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
-    for a in np.arange(-np.deg2rad(90.0), (np.deg2rad(90.)),0.04):
+    for a in np.arange(-90., 95.,5.):
  
-        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
+        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,np.rad2deg(a),b,r))
         cond=LA.cond(covmat)
         with open('dataA.csv', 'ab') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')
-          filewriter.writerow([cond , math.degrees(a)])
+          filewriter.writerow([cond , a])
           
-        if cond<mincond:
+        if cond<=mincond:
             mincond=cond
-            best=math.degrees(a)
-        if cond>maxcond:
+            best=a
+        if cond>=maxcond:
             maxcond=cond
-            worst=math.degrees(a)
+            worst=a
     x = []
     y = []
     with open('dataA.csv','r') as csvfile:
@@ -467,14 +462,15 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
     best=-1.
     mincond=1000000000.
     covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,100))
-    condmax=LA.cond(covmat)
+    #condmax=LA.cond(covmat)
  #r>0 so I tested many cases after 1 worst
-    for r in np.arange(0.0,110,10):
+    for r in np.arange(0.0,6.,1.):
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
         with open('dataR.csv', 'ab') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')
-          filewriter.writerow([float(cond)/condmax , r/100.])
+          #filewriter.writerow([float(cond)/condmax , r/100.])
+          filewriter.writerow([float(cond) , r])
       
         if int(cond)<=mincond:
             mincond=cond
@@ -520,7 +516,7 @@ imagePoints= project(cam,worldpoints, False)
 imagepoints_noise=add_noise(imagePoints,2,0,0)
 
 
-print cam.t
+#print cam.t
 
 
 
@@ -535,9 +531,9 @@ cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H)
 
 a,b,r=a_b_r_spherical(cam)
-#a=0
-#b=0
-#c=0
+#a=0.
+#b=0.
+#r=0.
 covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
-worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
 rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
