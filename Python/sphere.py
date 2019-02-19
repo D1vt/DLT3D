@@ -304,14 +304,25 @@ def covariance_matrix_p(self,worldpoints,imagepoints,a,b,c):
     return cov_mat
 
 #here I calculate the R from Euler equations and also the following: dR/da , dR/db , dR/dc as I am going to use them to calculate the Jacobian Matrix 
-def R_Euler(a,b,c):
-    #a=math.atan(cam.R[2,1]/cam.R[2,2])
-    #b=-math.atan(-cam.R[2,0]/math.sqrt((cam.R[2,1]*cam.R[2,1])+cam.R[2,2]*cam.R[2,2]))
-    #c=math.atan(cam.R[1,0]/cam.R[0,0])
+def R_Euler():
+    
+    #Euler as defined in page 51 of thesis Tracking Errors in Laparoscopic Surgeries
+    a=math.atan(cam.R[2,1]/cam.R[2,2])
+    b=-math.asin(cam.R[2,0])
+          #b=-math.atan(-cam.R[2,0]/math.sqrt((cam.R[2,1]*cam.R[2,1])+cam.R[2,2]*cam.R[2,2]))
+    c=math.atan(cam.R[1,0]/cam.R[0,0])
     #print a,b,c
-    R_Eu= np.array([[math.cos(a)*math.cos(c) - math.cos(b)*math.sin(a)*math.sin(c),-math.cos(a)*math.sin(c) - math.cos(b)*np.cos(c)*math.sin(a), math.sin(a)*math.sin(b)],
-                       [math.cos(c)*math.sin(a) + math.cos(a)*math.cos(b)*math.sin(c),math.cos(a)*math.cos(b)*math.cos(c) - math.sin(a)*math.sin(c),  -math.cos(a)*math.sin(b)],
-                       [ math.sin(b)*math.sin(c),math.cos(c)*math.sin(b),math.cos(b)]])
+    R_Eu_a=np.array([[1.,0.,0.],
+                     [0.,math.cos(a),-math.sin(a)],
+                     [0.,math.sin(a),math.cos(a)]])
+    R_Eu_b=np.array([[math.cos(b),0.,math.sin(b)],
+                      [0.,1.,0.],
+                      [-math.sin(b),0.,math.cos(b)]])
+    R_Eu_c=np.array([[math.cos(c),-math.sin(c),0.],
+                      [math.sin(c),math.cos(c),0.],
+                      [0.,0.,1.]])
+    R_Eu1=np.dot(R_Eu_a,R_Eu_b)
+    R_Eu=np.dot(R_Eu1,R_Eu_c)
    
     return R_Eu
 
@@ -352,7 +363,7 @@ def jacobian_matrix(self,a,b,r,worldpoints):
                           [math.cos(b)*math.cos(a), (-math.sin(b)),(math.cos(b))*math.sin(a)],
                           [0., 0., 0.]])
      dR_dr=np.full((3,3),0.) 
-     R_Eu=R_Euler(0.0,np.deg2rad(180.0),0.0)
+     R_Eu=R_Euler()
      R_Sphere_da=np.dot(dR_da,R_Eu[:3,:3])
      R_Sphere_db=np.dot(dR_db,R_Eu[:3,:3])
      R_Sphere_dr=np.dot(dR_dr,R_Eu[:3,:3])
