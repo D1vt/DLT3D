@@ -8,6 +8,7 @@ Created on Sat Jan  5 15:41:33 2019
 """
 import numpy as np 
 from random import randrange
+import random
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
@@ -116,21 +117,25 @@ def project(self,X, quant_error=False):
         return x
 
 
-def spherepoints(points):
-    worldpoints = np.random.randn(points, 3)
-    worldpoints /= np.linalg.norm(worldpoints, axis=0)
-    phi = np.linspace(0, np.pi, 20)
-    theta = np.linspace(0, 2 * np.pi, 40)
-    x = np.outer(np.sin(theta), np.cos(phi))
-    y = np.outer(np.sin(theta), np.sin(phi))
-    z = np.outer(np.cos(theta), np.ones_like(phi))
-    fig, ax = plt.subplots(1, 1, subplot_kw={'projection':'3d'})
-    ax.plot_wireframe(x, y, z, color='g')
-    worldpoints=np.transpose(worldpoints)
-    ax.scatter(worldpoints[:,1],worldpoints[:,2],worldpoints[:,3],s=70, c='r') 
-    ax.scatter(worldpoints[:,0],worldpoints[:,4],worldpoints[:,5],s=70, c='r') 
+def spherepoints(points,radius):
+    worldpoints=np.full((4,points),1.0)
+    for k in range(points):
+     theta=random.uniform((-math.pi)/2.,(math.pi/2.))
+     phi=random.uniform(0.,2*math.pi)
+     worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))
+     worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))
+     worldpoints[2,k]=radius*(math.cos(theta))
+    phisim = np.linspace((-math.pi)/2.,(math.pi/2.))
+    thetasim = np.linspace(0, 2 * np.pi)
+    x = np.outer(radius*np.sin(thetasim), radius*np.cos(phisim))
+    y = np.outer(radius*np.sin(thetasim), radius*np.sin(phisim))
+    z = np.outer(radius*np.cos(thetasim), np.ones_like(phisim))
+    fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
+    ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
+    ax.scatter(worldpoints[:3,1],worldpoints[:3,2],worldpoints[:3,3],s=70, c='r') 
+    ax.scatter(worldpoints[:3,0],worldpoints[:3,4],worldpoints[:3,5],s=70, c='r') 
     plt.show()
-    worldpoints=np.vstack((worldpoints,[1.0,1.0,1.0,1.0,1.0,1.0]))
+    #worldpoints=np.vstack((worldpoints,[1.0,1.0,1.0,1.0,1.0,1.0]))
     return worldpoints
 
 def normalize(points,size=2):
@@ -153,7 +158,8 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
     if (normalization==False):
        imagepoints,T=normalize(imagepoints)
        worldpoints,U=normalize(worldpoints,3)
-   
+    
+        
     A=np.array([[worldpoints[0,0],worldpoints[1,0],worldpoints[2,0],1.,0.,0.,0.,0.,-imagepoints[0,0]*worldpoints[0,0],-imagepoints[0,0]*worldpoints[1,0],-imagepoints[0,0]*worldpoints[2,0],-imagepoints[0,0]],
                [0.,0.,0.,0.,worldpoints[0,0],worldpoints[1,0],worldpoints[2,0],1.,-imagepoints[1,0]*worldpoints[0,0],-imagepoints[1,0]*worldpoints[1,0],-imagepoints[1,0]*worldpoints[2,0],-imagepoints[1,0]], 
                [worldpoints[0,1],worldpoints[1,1],worldpoints[2,1],1.,0.,0.,0.,0.,-imagepoints[0,1]*worldpoints[0,1],-imagepoints[0,1]*worldpoints[1,1],-imagepoints[0,1]*worldpoints[2,1],-imagepoints[0,1]],                              
@@ -169,10 +175,12 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
    
      
     U1, s, Vh = np.linalg.svd(A)
-     
+    
     Vh=np.transpose(Vh)
-    V=Vh[:,11].reshape(3,4)
-    H=denormalization(V,U,T)
+    #Vh=Vh/Vh[-1,-1]
+    H=Vh[:,11].reshape(3,4)
+    if (normalization==False):
+     H=denormalization(H,U,T)
     return H      
 
 #denormalize to find the final H matrix source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf (p.23)
@@ -183,20 +191,21 @@ def denormalization(V,U,T):
     return H
 
 #a function for the estimation of R,t using the V matrix from the DLT algorithm  
-def estimate_R_t(self,V):
+def estimate_R_t(self,V,cam_center):
     #source: Multiple View Geometry Richard Hartley and Andrew Zisserman, p.15 decompose P to K,R,t matrices
-     Rot=np.full((3,3), 0.0) 
-     T=np.dot(inv(self.K),V[:,3])
+     Rot=np.full((4,3), 0.0)
+     
+    
      for i in range(3):
-          Rot[2,i]=V[2,i]/self.K[2,2]  #fr3i=m3i
+          Rot[2,i]=V[2,i]/(self.K[2,2])  #fr3i=m3i
           Rot[1,i]=(V[1,i]- Rot[2,i]*self.K[1,2])/self.K[1,1];  #dr2i+er3i=m2,i
           Rot[0,i]= (V[0,i]-self.K[0,2]*Rot[2,i]-self.K[0,1]*Rot[1,i])/self.K[0,0]; #ar1i+br2i+cr3i=m1i    
-     est_trans=np.array([[1.,0.,0.,T[0]],
-                    [0.,1.,0.,T[1]],
-                    [0.,0.,1.,T[2]],
+     est_trans=np.array([[1.,0.,0.,cam_center[0]],
+                    [0.,1.,0.,cam_center[1]],
+                    [0.,0.,1.,cam_center[2]],
                     [0.,0.,0.,1.]])
-     est1_R=np.vstack((Rot,[0.,0.,0.])) #adding a zero row 
-     est_R=np.hstack((est1_R,[[0.],[0.],[0.],[1.]]))  #adding an extra column
+     
+     est_R=np.hstack((Rot,[[0.],[0.],[0.],[1.]]))  #adding an extra column
      return est_R,est_trans
 
 #find camera center source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf
@@ -209,8 +218,8 @@ def camera_center(H):
                 [H[2,3]]])
     Q=-inv(Q)
   
-    Qb=np.dot(Q,b)
-    cam_center=np.vstack((Qb,1.))
+    cam_center=np.dot(Q,b)
+   
     return cam_center
 
 
@@ -305,11 +314,11 @@ def covariance_matrix_p(self,worldpoints,imagepoints,a,b,c):
 
 #here I calculate the R from Euler equations and also the following: dR/da , dR/db , dR/dc as I am going to use them to calculate the Jacobian Matrix 
 def R_Euler():
+   
     
     #Euler as defined in page 51 of thesis Tracking Errors in Laparoscopic Surgeries
     a=math.atan(cam.R[2,1]/cam.R[2,2])
     b=-math.asin(cam.R[2,0])
-          #b=-math.atan(-cam.R[2,0]/math.sqrt((cam.R[2,1]*cam.R[2,1])+cam.R[2,2]*cam.R[2,2]))
     c=math.atan(cam.R[1,0]/cam.R[0,0])
     #print a,b,c
     R_Eu_a=np.array([[1.,0.,0.],
@@ -475,7 +484,7 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
     covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,100))
     #condmax=LA.cond(covmat)
  #r>0 so I tested many cases after 1 worst
-    for r in np.arange(0.0,6.,1.):
+    for r in np.arange(0.0,3.2,0.2):
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
         with open('dataR.csv', 'ab') as csvfile:
@@ -483,7 +492,7 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
           #filewriter.writerow([float(cond)/condmax , r/100.])
           filewriter.writerow([float(cond) , r])
       
-        if int(cond)<=mincond:
+        if cond<=mincond:
             mincond=cond
             
             best=r
@@ -506,6 +515,14 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
         
     return best
 
+def error_DLT(estimated_R,estimated_t):
+    Rerror=(abs(cam.R[:3,:3]-estimated_R[:3,:3]))
+    #Rerror=(1/9)*(Rerror[0,0]+Rerror[0,1]+Rerror[0,2]+Rerror[1,0])
+    
+    Terror=abs(cam.t[:3,3]-estimated_t[:3,3])
+    #Rcond=LA.cond(Rerror[:3,:3])
+    
+    return Rerror,Terror
    
 #values
 cam=Camera()
@@ -514,37 +531,41 @@ set_width_heigth(cam,960,960)
 imagePoints=np.full((2,6),0.0)
 set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
 set_t(cam,0.0,-0.0,0.5, frame='world')
-#worldpoints = spherepoints(6)
+worldpoints = spherepoints(6,1)
 #testpoints
-worldpoints= np.array([[-0.0857406, -0.423167,	0.170105,	 0.32051,	 0.511078,	0.648625],
-[-0.603913,	-0.144078,	-0.354525,	-0.411165,	-0.417735,	-0.38116],
-[-0.26259,	 0.0339388	,-0.370209	,0.00945364,	-0.122987,	0.88183],
-[1.,	1.,	1.,	1.,	1.,	1.]])
 
+
+#worldpoints= np.array([[0.,0.,1.,0.,-1.,0.],
+ #                    [0.,1.,0.,0.,0.,-1.],
+  #                   [1,0.,0.,-1.,0.,0.],
+   #                  [1.,1.,1.,1.,1.,1.]])
 
 
 imagePoints= project(cam,worldpoints, False)
-imagepoints_noise=add_noise(imagePoints,2,0,0)
+imagepoints_noise=add_noise(imagePoints,2.,1.,0)
 
-
-#print cam.t
+print cam.K
 
 
 
 #NoNoiseTest
-#H=DLT3D(cam,worldpoints,imagePoints)
+H=DLT3D(cam,worldpoints,imagePoints, True)
 
 
 #NoiseTest
-H=DLT3D(cam,worldpoints, imagepoints_noise)
+#H=DLT3D(cam,worldpoints, imagepoints_noise, False)
 
 cam_center=camera_center(H)
-estimated_R,estimated_t=estimate_R_t(cam,H)
+estimated_R,estimated_t=estimate_R_t(cam,H,cam_center)
 
 a,b,r=a_b_r_spherical(cam)
 #a=0.
 #b=0.
 #r=0.
 covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
-rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
-worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
+#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+#worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,rbest)
+Rcond,Tcond=error_DLT(estimated_R,estimated_t)
+print cam.R
+print cam.t
+#print cam.P
