@@ -177,10 +177,14 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
     U1, s, Vh = np.linalg.svd(A)
     
     Vh=np.transpose(Vh)
-    #Vh=Vh/Vh[-1,-1]
-    H=Vh[:,11].reshape(3,4)
+    H=Vh[:,11].reshape(3,4)  
     if (normalization==False):
      H=denormalization(H,U,T)
+    normK= (np.linalg.norm(cam.K))
+    print normK
+    H=H*(normK)
+    if H[0,0]<0:
+        H=-H
     return H      
 
 #denormalize to find the final H matrix source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf (p.23)
@@ -227,18 +231,19 @@ def camera_center(H):
 def add_noise(imagepoints,sd=4.,mean=0., size=10000):
    if size==0:
     imagenoise=np.full((2,6),0.0)
-    imagenoise[0,0]=np.random.normal(mean,sd)+ imagepoints[0,0]
-    imagenoise[1,0]=np.random.normal(mean,sd)+ imagepoints[1,0]
-    imagenoise[0,1]=np.random.normal(mean,sd)+ imagepoints[0,1]
-    imagenoise[1,1]=np.random.normal(mean,sd)+ imagepoints[1,1]
-    imagenoise[0,2]=np.random.normal(mean,sd)+ imagepoints[0,2]
-    imagenoise[1,2]=np.random.normal(mean,sd)+ imagepoints[1,2]
-    imagenoise[0,3]=np.random.normal(mean,sd)+ imagepoints[0,3]
-    imagenoise[1,3]=np.random.normal(mean,sd)+ imagepoints[1,3]
-    imagenoise[0,4]=np.random.normal(mean,sd)+ imagepoints[0,4]
-    imagenoise[1,4]=np.random.normal(mean,sd)+ imagepoints[1,4]
-    imagenoise[0,5]=np.random.normal(mean,sd)+ imagepoints[0,5]
-    imagenoise[1,5]=np.random.normal(mean,sd)+ imagepoints[1,5]
+    randomnoise=np.random.normal(mean,sd)
+    imagenoise[0,0]=randomnoise+ imagepoints[0,0]
+    imagenoise[1,0]=randomnoise+ imagepoints[1,0]
+    imagenoise[0,1]=randomnoise+ imagepoints[0,1]
+    imagenoise[1,1]=randomnoise+ imagepoints[1,1]
+    imagenoise[0,2]=randomnoise+ imagepoints[0,2]
+    imagenoise[1,2]=randomnoise+ imagepoints[1,2]
+    imagenoise[0,3]=randomnoise+ imagepoints[0,3]
+    imagenoise[1,3]=randomnoise+ imagepoints[1,3]
+    imagenoise[0,4]=randomnoise+ imagepoints[0,4]
+    imagenoise[1,4]=randomnoise+ imagepoints[1,4]
+    imagenoise[0,5]=randomnoise+ imagepoints[0,5]
+    imagenoise[1,5]=randomnoise+ imagepoints[1,5]
     return imagenoise
    else: 
     px1=imagepoints[0,0] +np.random.normal(mean,sd,size)
@@ -256,7 +261,17 @@ def add_noise(imagepoints,sd=4.,mean=0., size=10000):
     imageNoise=np.array([[px1,px2,px3,px4,px5,px6],
                         [py1,py2,py3,py4,py5,py6]])
     return imageNoise        
+
     
+def DLTproject(H,X, quant_error=False):
+        """  Project points in X (4*n array) and normalize coordinates. """
+        #set_P(cam)
+        x = np.dot(H,X)
+        for i in range(x.shape[1]):
+          x[:,i] /= x[2,i]
+        if(quant_error):
+            x = np.around(x, decimals=0)
+        return x        
     
   ### here we solve the problem using spherical coordinates and Euler angles
 
@@ -515,14 +530,12 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
         
     return best
 
-def error_DLT(estimated_R,estimated_t):
-    Rerror=(abs(cam.R[:3,:3]-estimated_R[:3,:3]))
-    #Rerror=(1/9)*(Rerror[0,0]+Rerror[0,1]+Rerror[0,2]+Rerror[1,0])
-    
-    Terror=abs(cam.t[:3,3]-estimated_t[:3,3])
-    #Rcond=LA.cond(Rerror[:3,:3])
-    
-    return Rerror,Terror
+def reprojection_error(imagepoints,DLTimage,points):
+    repr_error=0.
+    for size in range(points):
+     distance=math.sqrt((imagepoints[0,size]-DLTimage[0,size])*(imagepoints[0,size]-DLTimage[0,size])+(imagepoints[1,size]-DLTimage[1,size])*(imagepoints[1,size]-DLTimage[1,size]))
+     repr_error=distance+repr_error
+    return repr_error
    
 #values
 cam=Camera()
@@ -531,18 +544,18 @@ set_width_heigth(cam,960,960)
 imagePoints=np.full((2,6),0.0)
 set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
 set_t(cam,0.0,-0.0,0.5, frame='world')
-worldpoints = spherepoints(6,1)
+worldpoints = spherepoints(6,100)
 #testpoints
 
 
-#worldpoints= np.array([[0.,0.,1.,0.,-1.,0.],
- #                    [0.,1.,0.,0.,0.,-1.],
-  #                   [1,0.,0.,-1.,0.,0.],
+#worldpoints= np.array([[0.,0.,100.,0.,0.,-100.],
+ #                    [0.,100.,0.,0.,-100.,0.],
+  #                   [100,0.,0.,-100.,0.,0.],
    #                  [1.,1.,1.,1.,1.,1.]])
 
 
 imagePoints= project(cam,worldpoints, False)
-imagepoints_noise=add_noise(imagePoints,2.,1.,0)
+#imagepoints_noise=add_noise(imagePoints,1.,0.,0)
 
 print cam.K
 
@@ -555,6 +568,7 @@ H=DLT3D(cam,worldpoints,imagePoints, True)
 #NoiseTest
 #H=DLT3D(cam,worldpoints, imagepoints_noise, False)
 
+DLTimage=DLTproject(H,worldpoints)
 cam_center=camera_center(H)
 estimated_R,estimated_t=estimate_R_t(cam,H,cam_center)
 
@@ -565,7 +579,8 @@ a,b,r=a_b_r_spherical(cam)
 covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
 #rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
 #worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,rbest)
-Rcond,Tcond=error_DLT(estimated_R,estimated_t)
+error=reprojection_error(imagePoints,DLTimage,6)
 print cam.R
 print cam.t
+
 #print cam.P
