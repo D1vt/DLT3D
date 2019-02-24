@@ -19,6 +19,8 @@ import csv
 with open('dataA.csv', 'w') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')
 with open('dataR.csv', 'w') as csvfile:
+          filewriter = csv.writer(csvfile, delimiter=' ')
+with open('dataerror.csv', 'w') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')          
 
 
@@ -120,18 +122,18 @@ def project(self,X, quant_error=False):
 def spherepoints(points,radius):
     worldpoints=np.full((4,points),1.0)
     for k in range(points):
-     theta=random.uniform((-math.pi)/2.,(math.pi/2.))
+     theta=random.uniform(0.,math.pi)
      phi=random.uniform(0.,2*math.pi)
      worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))
      worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))
      worldpoints[2,k]=radius*(math.cos(theta))
-    phisim = np.linspace((-math.pi)/2.,(math.pi/2.))
-    thetasim = np.linspace(0, 2 * np.pi)
-    x = np.outer(radius*np.sin(thetasim), radius*np.cos(phisim))
-    y = np.outer(radius*np.sin(thetasim), radius*np.sin(phisim))
-    z = np.outer(radius*np.cos(thetasim), np.ones_like(phisim))
+    #phisim = np.linspace((-math.pi)/2.,(math.pi/2.))
+    #thetasim = np.linspace(0, 2 * np.pi)
+    #x = np.outer(radius*np.sin(thetasim), radius*np.cos(phisim))
+    #y = np.outer(radius*np.sin(thetasim), radius*np.sin(phisim))
+    #z = np.outer(radius*np.cos(thetasim), np.ones_like(phisim))
     fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
-    ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
+    #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
     ax.scatter(worldpoints[:3,1],worldpoints[:3,2],worldpoints[:3,3],s=70, c='r') 
     ax.scatter(worldpoints[:3,0],worldpoints[:3,4],worldpoints[:3,5],s=70, c='r') 
     plt.show()
@@ -175,14 +177,18 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
    
      
     U1, s, Vh = np.linalg.svd(A)
+    normA= (np.linalg.norm(A))
     
+    normK= (np.linalg.norm(cam.K))
+    print normA/normK
     Vh=np.transpose(Vh)
     H=Vh[:,11].reshape(3,4)  
+    
     if (normalization==False):
-     H=denormalization(H,U,T)
-    normK= (np.linalg.norm(cam.K))
-    print normK
-    H=H*(normK)
+        H=H*(normA)
+        H=denormalization(H,U,T)
+    else:  
+     H=H*(normK)
     if H[0,0]<0:
         H=-H
     return H      
@@ -191,26 +197,26 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
 def denormalization(V,U,T):
     T=inv(T)
     TV=np.dot(T,V)
-    H=np.dot(TV,U)
+    H=(1.75)*np.dot(TV,U)
     return H
 
 #a function for the estimation of R,t using the V matrix from the DLT algorithm  
 def estimate_R_t(self,V,cam_center):
     #source: Multiple View Geometry Richard Hartley and Andrew Zisserman, p.15 decompose P to K,R,t matrices
-     Rot=np.full((4,3), 0.0)
      
-    
-     for i in range(3):
+    Rot=np.full((4,3),0.)
+    for i in range(3):
           Rot[2,i]=V[2,i]/(self.K[2,2])  #fr3i=m3i
           Rot[1,i]=(V[1,i]- Rot[2,i]*self.K[1,2])/self.K[1,1];  #dr2i+er3i=m2,i
           Rot[0,i]= (V[0,i]-self.K[0,2]*Rot[2,i]-self.K[0,1]*Rot[1,i])/self.K[0,0]; #ar1i+br2i+cr3i=m1i    
-     est_trans=np.array([[1.,0.,0.,cam_center[0]],
-                    [0.,1.,0.,cam_center[1]],
-                    [0.,0.,1.,cam_center[2]],
+    est_trans=np.array([[1.,0.,0.,abs(cam_center[0])],
+                    [0.,1.,0.,abs(cam_center[1])],
+                    [0.,0.,1.,abs(cam_center[2])],
                     [0.,0.,0.,1.]])
      
-     est_R=np.hstack((Rot,[[0.],[0.],[0.],[1.]]))  #adding an extra column
-     return est_R,est_trans
+    est_R=np.hstack((Rot,[[0.],[0.],[0.],[1.]]))  #adding an extra column
+    return est_R,est_trans
+       
 
 #find camera center source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf
 def camera_center(H):
@@ -231,19 +237,19 @@ def camera_center(H):
 def add_noise(imagepoints,sd=4.,mean=0., size=10000):
    if size==0:
     imagenoise=np.full((2,6),0.0)
-    randomnoise=np.random.normal(mean,sd)
-    imagenoise[0,0]=randomnoise+ imagepoints[0,0]
-    imagenoise[1,0]=randomnoise+ imagepoints[1,0]
-    imagenoise[0,1]=randomnoise+ imagepoints[0,1]
-    imagenoise[1,1]=randomnoise+ imagepoints[1,1]
-    imagenoise[0,2]=randomnoise+ imagepoints[0,2]
-    imagenoise[1,2]=randomnoise+ imagepoints[1,2]
-    imagenoise[0,3]=randomnoise+ imagepoints[0,3]
-    imagenoise[1,3]=randomnoise+ imagepoints[1,3]
-    imagenoise[0,4]=randomnoise+ imagepoints[0,4]
-    imagenoise[1,4]=randomnoise+ imagepoints[1,4]
-    imagenoise[0,5]=randomnoise+ imagepoints[0,5]
-    imagenoise[1,5]=randomnoise+ imagepoints[1,5]
+    
+    imagenoise[0,0]=imagepoints[0,0] +np.random.normal(mean,sd)
+    imagenoise[1,0]=imagepoints[1,0] +np.random.normal(mean,sd)
+    imagenoise[0,1]= imagepoints[0,1] +np.random.normal(mean,sd)
+    imagenoise[1,1]=imagepoints[1,1] +np.random.normal(mean,sd)
+    imagenoise[0,2]=imagepoints[0,2] +np.random.normal(mean,sd)
+    imagenoise[1,2]=imagepoints[1,2] +np.random.normal(mean,sd)
+    imagenoise[0,3]=imagepoints[0,3] +np.random.normal(mean,sd)
+    imagenoise[1,3]=imagepoints[1,3] +np.random.normal(mean,sd)
+    imagenoise[0,4]=imagepoints[0,4] +np.random.normal(mean,sd)
+    imagenoise[1,4]=imagepoints[1,4] +np.random.normal(mean,sd)
+    imagenoise[0,5]=imagepoints[0,5] +np.random.normal(mean,sd)
+    imagenoise[1,5]=imagepoints[1,5] +np.random.normal(mean,sd)
     return imagenoise
    else: 
     px1=imagepoints[0,0] +np.random.normal(mean,sd,size)
@@ -262,6 +268,24 @@ def add_noise(imagepoints,sd=4.,mean=0., size=10000):
                         [py1,py2,py3,py4,py5,py6]])
     return imageNoise        
 
+def stand_add_noise(imagepoints,noise):
+   
+    imagenoise=np.full((2,6),0.0)
+    
+    imagenoise[0,0]=imagepoints[0,0] +noise[0]
+    imagenoise[1,0]=imagepoints[1,0] +noise[0]
+    imagenoise[0,1]= imagepoints[0,1] +noise[1]
+    imagenoise[1,1]=imagepoints[1,1] +noise[1]
+    imagenoise[0,2]=imagepoints[0,2] +noise[2]
+    imagenoise[1,2]=imagepoints[1,2] +noise[2]
+    imagenoise[0,3]=imagepoints[0,3] +noise[3]
+    imagenoise[1,3]=imagepoints[1,3] +noise[3]
+    imagenoise[0,4]=imagepoints[0,4] +noise[4]
+    imagenoise[1,4]=imagepoints[1,4] +noise[4]
+    imagenoise[0,5]=imagepoints[0,5] +noise[5]
+    imagenoise[1,5]=imagepoints[1,5] +noise[5]
+    return imagenoise
+        
     
 def DLTproject(H,X, quant_error=False):
         """  Project points in X (4*n array) and normalize coordinates. """
@@ -413,6 +437,7 @@ def jacobian_matrix(self,a,b,r,worldpoints):
      dRt_db=np.hstack((R_Sphere_db, t_Sphere_db))
      dRt_dr=np.hstack((R_Sphere_dr, t_Sphere_dr))
      Rt_sphere=np.hstack((R_Sphere, t_Sphere))
+     #print Rt_sphere
      #I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in AR"
      P_da=np.dot(self.K,dRt_da)
      P_db=np.dot(self.K,dRt_db)
@@ -536,51 +561,123 @@ def reprojection_error(imagepoints,DLTimage,points):
      distance=math.sqrt((imagepoints[0,size]-DLTimage[0,size])*(imagepoints[0,size]-DLTimage[0,size])+(imagepoints[1,size]-DLTimage[1,size])*(imagepoints[1,size]-DLTimage[1,size]))
      repr_error=distance+repr_error
     return repr_error
-   
+
+def mean_error_R(self,estimated_R):
+    er=abs((self.R[:3,:3])-(estimated_R[:3,:3]))
+    sumerr=sum(er)
+    meanerr=(1./9.)*(sumerr[0]+sumerr[1]+sumerr[2])
+    return meanerr
+
+def mean_error_t(self,estimated_t):
+    er=abs((self.t[:3,3])-(estimated_t[:3,3]))
+    #squareerr=(self.t[:3,3])-(estimated_t[:3,3])*(self.t[:3,3])-(estimated_t[:3,3])
+    print er
+    sumerr=sum(er)
+    meanert=(1./3.)*(sumerr)
+    return meanert
+    #return meanerr
+
 #values
 cam=Camera()
-set_K(cam,fx = 800,fy = 800,cx = 640,cy = 480)
+set_K(cam,fx = 800.,fy = 800.,cx = 640.,cy = 480.)
 set_width_heigth(cam,960,960)
 imagePoints=np.full((2,6),0.0)
 set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
 set_t(cam,0.0,-0.0,0.5, frame='world')
-worldpoints = spherepoints(6,100)
+
+#minerror=800.
+#for i in range(5000):
+#worldpoints = spherepoints(6,3)
 #testpoints
 
-
-#worldpoints= np.array([[0.,0.,100.,0.,0.,-100.],
- #                    [0.,100.,0.,0.,-100.,0.],
-  #                   [100,0.,0.,-100.,0.,0.],
-   #                  [1.,1.,1.,1.,1.,1.]])
+#worldpoints= np.array([[-0.288196	,0.514691,	-0.268344,	0.106942,	0.20906	,-0.00185426],
+#[0.0842054	,0.630274	,-0.061876	,-0.32612	,0.406239	,-0.369982],
+#[2.98494	,2.88753,	-2.98733,	2.9803,	-2.96501,	-2.9777],
 
 
-imagePoints= project(cam,worldpoints, False)
+
 #imagepoints_noise=add_noise(imagePoints,1.,0.,0)
+#for p in np.arange(0.000000001,0.0000001,0.000000001):
+ #   if p==0.000000001:
+mincondH=1000000000.
+error=1000000000000.
+noise=np.full((6,1),0.0)
+for i in range(6):
+ noise[i]=np.random.normal(4.,0.)
 
-print cam.K
+for p in range(5000):
+     worldpoints = spherepoints(6,3)
+     imagePoints= project(cam,worldpoints, False)
+     #H=DLT3D(cam,worldpoints,imagePoints, True)
+     #DLTimage=DLTproject(H,worldpoints)
+     
+     #imagepoints_noise=add_noise(imagePoints,noise,0.,0)
+     imagepoints_noise=stand_add_noise(imagePoints,noise[:])
+     H=DLT3D(cam,worldpoints, imagepoints_noise, False)
+     DLTimage=DLTproject(H,worldpoints)
+     error_withnoise=reprojection_error(imagePoints,DLTimage,6)
+     covH=np.cov(H)
+     condH=LA.cond(covH)
+     if condH<mincondH:
+         mincondH=condH
+         bestpoints=worldpoints
+     if error_withnoise<error:
+         error=error_withnoise
+         bestnoerror=worldpoints
+         bestH=H
+     print p    
+     
+    #with open('dataerror.csv', 'ab') as csvfile:
+     #     filewriter = csv.writer(csvfile, delimiter=' ')
+      #    filewriter.writerow([error_withnoise , problem])
+ #print i
 
+#x = []
+#y = []
+#with open('dataerror.csv','r') as csvfile:
+ #        plots = csv.reader(csvfile, delimiter=' ')
+  #       for column in plots:
+   #       x.append((float(column[1])))
+    #      y.append(float(column[0]))
 
+     #    plt.plot(x,y, label='Loaded from file!')
+      #   plt.xlabel('noise added')
+       #  plt.ylabel('error_withnoise')
+        # plt.title('reprojectionerror as we increase noise')
+         #plt.legend()
+         #plt.show()
 
 #NoNoiseTest
-H=DLT3D(cam,worldpoints,imagePoints, True)
+#
 
 
 #NoiseTest
-#H=DLT3D(cam,worldpoints, imagepoints_noise, False)
 
-DLTimage=DLTproject(H,worldpoints)
-cam_center=camera_center(H)
-estimated_R,estimated_t=estimate_R_t(cam,H,cam_center)
+cam_center=camera_center(bestH)
+estimated_R,estimated_t=estimate_R_t(cam,bestH,cam_center)
+fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
+    #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
+ax.scatter(bestnoerror[:3,1],bestnoerror[:3,2],bestnoerror[:3,3],s=70, c='r') 
+ax.scatter(bestnoerror[:3,0],bestnoerror[:3,4],bestnoerror[:3,5],s=70, c='r') 
+plt.show()
 
-a,b,r=a_b_r_spherical(cam)
+#a,b,r=a_b_r_spherical(cam)
 #a=0.
 #b=0.
 #r=0.
-covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
+#covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
 #rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
 #worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,rbest)
-error=reprojection_error(imagePoints,DLTimage,6)
-print cam.R
+
+#
+ #if error<minerror:
+  # minerror=error
+   #bestpointconfig=worldpoints
+   
+print cam.P
 print cam.t
+
+err_R=mean_error_R(cam,estimated_R)
+err_t=mean_error_t(cam,estimated_t)
 
 #print cam.P
