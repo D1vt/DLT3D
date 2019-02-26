@@ -196,8 +196,8 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
 #denormalize to find the final H matrix source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf (p.23)
 def denormalization(V,U,T):
     T=inv(T)
-    TV=np.dot(T,V)
-    H=(1.75)*np.dot(TV,U)
+    TV=2*np.dot(T,V)
+    H=np.dot(TV,U)
     return H
 
 #a function for the estimation of R,t using the V matrix from the DLT algorithm  
@@ -590,11 +590,14 @@ set_t(cam,0.0,-0.0,0.5, frame='world')
 #worldpoints = spherepoints(6,3)
 #testpoints
 
-#worldpoints= np.array([[-0.288196	,0.514691,	-0.268344,	0.106942,	0.20906	,-0.00185426],
-#[0.0842054	,0.630274	,-0.061876	,-0.32612	,0.406239	,-0.369982],
-#[2.98494	,2.88753,	-2.98733,	2.9803,	-2.96501,	-2.9777],
-
-
+#worldpoints= np.array([[0.190412,	0.0808352,	-2.24248,	-2.24248,	2.37803,	2.58001],
+#[1.04782,	1.36968,	-1.82283,	1.82283,	1.81699,	-1.50977],
+#[2.80461,	2.66786,-0.805333,	-0.805333,	0.20866,	0.253266],
+#[1.,1.,1.,1.,1.,1.]])
+#imagePoints= project(cam,worldpoints, False)
+#H=DLT3D(cam,worldpoints,imagePoints, True)
+#DLTimage=DLTproject(H,worldpoints)
+#error1=reprojection_error(imagePoints,DLTimage,6)
 
 #imagepoints_noise=add_noise(imagePoints,1.,0.,0)
 #for p in np.arange(0.000000001,0.0000001,0.000000001):
@@ -605,7 +608,7 @@ noise=np.full((6,1),0.0)
 for i in range(6):
  noise[i]=np.random.normal(4.,0.)
 
-for p in range(5000):
+for p in range(1000):
      worldpoints = spherepoints(6,3)
      imagePoints= project(cam,worldpoints, False)
      #H=DLT3D(cam,worldpoints,imagePoints, True)
@@ -625,12 +628,12 @@ for p in range(5000):
          error=error_withnoise
          bestnoerror=worldpoints
          bestH=H
-     print p    
      
-    #with open('dataerror.csv', 'ab') as csvfile:
-     #     filewriter = csv.writer(csvfile, delimiter=' ')
-      #    filewriter.writerow([error_withnoise , problem])
- #print i
+     print p    
+     with open('dataerror.csv', 'ab') as csvfile:
+          filewriter = csv.writer(csvfile, delimiter=' ')
+          filewriter.writerow([error_withnoise , worldpoints])
+ 
 
 #x = []
 #y = []
@@ -659,6 +662,12 @@ fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
     #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
 ax.scatter(bestnoerror[:3,1],bestnoerror[:3,2],bestnoerror[:3,3],s=70, c='r') 
 ax.scatter(bestnoerror[:3,0],bestnoerror[:3,4],bestnoerror[:3,5],s=70, c='r') 
+plt.show()
+
+fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
+    #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
+ax.scatter(bestpoints[:3,0],bestpoints[:3,1],bestpoints[:3,2],s=70, c='b') 
+ax.scatter(bestpoints[:3,3],bestpoints[:3,4],bestpoints[:3,5],s=70, c='b') 
 plt.show()
 
 #a,b,r=a_b_r_spherical(cam)
