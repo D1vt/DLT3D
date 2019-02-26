@@ -23,6 +23,7 @@ with open('dataR.csv', 'w') as csvfile:
 with open('dataerror.csv', 'w') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')          
 
+          
 
 class Camera(object):
     """ Class for representing pin-hole cameras. """
