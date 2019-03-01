@@ -1,3 +1,6 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
 Created on Fri Feb 28 21:42:40 2019
 
 @author: diana
@@ -6,11 +9,15 @@ Created on Fri Feb 28 21:42:40 2019
 import numpy as np
 import random
 import math
+from matplotlib import pyplot as plt
+#from vision.rt_matrix import *
+#import matplotlib.pyplot as plt
 
 class Sphere(object):
     """ Class for representing a 3D grid sphere based on radius r, and angles phi,theta."""
-    def __init__(self, origin=np.array([0., 0., 0.])):
+    def __init__(self ,radius=1.,origin=np.array([0., 0., 0.])):
         self.origin= origin
+        self.radius= radius
         self.sphere_points = None
         self.type = 'sphere'
     
@@ -21,7 +28,7 @@ class Sphere(object):
         min_dist: minimum distance between each point
         """
         wrldpoints=np.full((4,p),1.0)
-        
+        self.radius=r
         for k in range(0,p):
             theta=random.uniform(0.,math.pi)
             phi=random.uniform(0.,2*math.pi)
@@ -52,10 +59,18 @@ class Sphere(object):
               
     def set_origin(self, origin):
         self.origin = origin
-
     def get_sphere_points(self):
-       return np.copy(self.sphere_points)         
+       return np.copy(self.sphere_points)  
+    
+    def plot_sphere(self):
+        phisim = np.linspace((-math.pi)/2.,(math.pi/2.))
+        thetasim = np.linspace(0, 2 * np.pi)
+        x = np.outer(np.sin(thetasim), np.cos(phisim))
+        y = np.outer(np.sin(thetasim), np.sin(phisim))
+        z = np.outer(np.cos(thetasim), np.ones_like(phisim))
+        fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
+        ax.plot_wireframe(self.radius*x, self.radius*y, self.radius*z, color='g')
    
 S=Sphere()
 worldpoints = S.get_points(6,2) 
-        
+S.plot_sphere()        
