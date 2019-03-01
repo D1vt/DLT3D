@@ -29,8 +29,8 @@ def R_Euler(a,b,c):
     R_Eu_c=np.array([[math.cos(c),-math.sin(c),0.],
                       [math.sin(c),math.cos(c),0.],
                       [0.,0.,1.]])
-    R_Eu1=np.dot(R_Eu_a,R_Eu_b)
-    R_Eu=np.dot(R_Eu1,R_Eu_c)
+    R_Eu1=np.dot(R_Eu_c,R_Eu_b)
+    R_Eu=np.dot(R_Eu1,R_Eu_a)
     
     return R_Eu
 
