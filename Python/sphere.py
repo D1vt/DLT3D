@@ -41,13 +41,13 @@ class Camera(object):
         self.img_width = 1280
         self.img_height = 960
 
-def set_P(self):
+    def set_P(self):
         # P = K[R|t]
         # P is a 3x4 Projection Matrix (from 3d euclidean to image)
         #self.Rt = np.hstack((self.R, self.t))
         self.P = np.dot(self.K, self.Rt[:3,:4])
     
-def set_K(self, fx = 1, fy = 1, cx = 0,cy = 0):
+    def set_K(self, fx = 1, fy = 1, cx = 0,cy = 0):
         # K is the 3x3 Camera matrix
         # fx, fy are focal lenghts expressed in pixel units
         # cx, cy is a principal point usually at image center
@@ -58,19 +58,19 @@ def set_K(self, fx = 1, fy = 1, cx = 0,cy = 0):
         self.K = np.mat([[fx, 0., cx],
                       [0.,fy,cy],
                       [0.,0.,1.]], dtype=np.float32)
-        set_P(cam)
+        self.set_P()
 
 
-def set_width_heigth(self,width, heigth):
+    def set_width_heigth(self,width, heigth):
         self.img_width = width
         self.img_height = heigth
 
-def update_Rt(self):
+    def update_Rt(self):
         self.Rt = np.dot(self.t,self.R)
     
-        set_P(cam)
+        self.set_P()
 
-def set_R_axisAngle(self,x,y,z, alpha):
+    def set_R_axisAngle(self,x,y,z, alpha):
         """  Creates a 3D [R|t] matrix for rotation
         around the axis of the vector defined by (x,y,z)
         and an alpha angle."""
@@ -83,15 +83,15 @@ def set_R_axisAngle(self,x,y,z, alpha):
         R = np.eye(4)
         R[:3,:3] = expm(a_skew*alpha)
         self.R = R
-        update_Rt(cam)
+        self.update_Rt()
    
 
-def set_R_mat(self,R):
+    def set_R_mat(self,R):
         self.R = R
         self.update_Rt()
 
 
-def set_t(self, x,y,z, frame = 'camera'):
+    def set_t(self, x,y,z, frame = 'camera'):
         #self.t = array([[x],[y],[z]])
         self.t = np.eye(4)
         if frame=='world':
@@ -100,18 +100,18 @@ def set_t(self, x,y,z, frame = 'camera'):
           self.t[:3,3] = cam_t[:3]
         else:
           self.t[:3,3] = np.array([x,y,z])
-        update_Rt(cam)
+        self.update_Rt()
 
 
 
-def get_world_position(self):
+    def get_world_position(self):
         t = np.dot(inv(cam.Rt), np.array([0.,0.,0.,1.]))
         return t
 
 
-def project(self,X, quant_error=False):
+    def project(self,X, quant_error=False):
         """  Project points in X (4*n array) and normalize coordinates. """
-        set_P(cam)
+        self.set_P()
         x = np.dot(self.P,X)
         for i in range(x.shape[1]):
           x[:,i] /= x[2,i]
@@ -119,12 +119,15 @@ def project(self,X, quant_error=False):
             x = np.around(x, decimals=0)
         return x
 
-
-def spherepoints(points,radius):
+   
+def spherepoints(points,r):
     worldpoints=np.full((4,points),1.0)
     for k in range(points):
      theta=random.uniform(0.,math.pi)
      phi=random.uniform(0.,2*math.pi)
+     radius=random.uniform(0,r)
+     while(radius==0):
+         radius=random.uniform(0,r)
      worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))
      worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))
      worldpoints[2,k]=radius*(math.cos(theta))
@@ -274,7 +277,7 @@ def DLTproject(H,X, quant_error=False):
 
 #calculate the a,b,c 
 def a_b_r_spherical(self):
-    world_position = get_world_position(self.Rt)  
+    world_position = self.get_world_position()  
     x = world_position[0]
     y = world_position[1]
     z = world_position[2]
@@ -527,7 +530,7 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
 
         
     return best
-
+#https://en.wikipedia.org/wiki/Reprojection_error
 def reprojection_error(imagepoints,DLTimage,points):
     repr_error=0.
     for size in range(points):
@@ -535,6 +538,8 @@ def reprojection_error(imagepoints,DLTimage,points):
      repr_error=distance+repr_error
     return repr_error
 
+
+#find R,t error: https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
 def mean_error_R(self,estimated_R):
     er=abs((self.R[:3,:3])-(estimated_R[:3,:3]))
     sumerr=sum(er)
@@ -574,11 +579,11 @@ def estimateRwithQRfact(H):
 
 #values
 cam=Camera()
-set_K(cam,fx = 800.,fy = 800.,cx = 640.,cy = 480.)
-set_width_heigth(cam,960,960)
+cam.set_K(fx = 800.,fy = 800.,cx = 640.,cy = 480.)
+cam.set_width_heigth(960,960)
 imagePoints=np.full((2,6),0.0)
-set_R_axisAngle(cam,1.0,  0.0,  0.0, np.deg2rad(180.0))
-set_t(cam,0.0,-0.0,0.5, frame='world')
+cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
+cam.set_t(0.0,-0.0,0.5, frame='world')
 
 
 mincondH=1000000000.
@@ -586,16 +591,16 @@ error=1000000000000.
 noise = np.random.normal(0,1,(2,6))
 print noise
 
-for p in range(100):
+for p in range(10):
      worldpoints = spherepoints(6,3)
-     imagePoints= project(cam,worldpoints, False)
-     H=DLT3D(cam,worldpoints,imagePoints,True)
-     DLTimage=DLTproject(H,worldpoints)
+     imagePoints= cam.project(worldpoints, False)
+     #H=DLT3D(cam,worldpoints,imagePoints,True)
+     #DLTimage=DLTproject(H,worldpoints)
      
      #imagepoints_noise=add_noise(imagePoints,noise,0.,0)
-     #imagepoints_noise=stand_add_noise(imagePoints,noise)
-     #H=DLT3D(cam,worldpoints, imagepoints_noise, False)
-     #DLTimage=DLTproject(H,worldpoints)
+     imagepoints_noise=stand_add_noise(imagePoints,noise)
+     H=DLT3D(cam,worldpoints, imagepoints_noise, False)
+     DLTimage=DLTproject(H,worldpoints)
      error_withnoise=reprojection_error(imagePoints,DLTimage,6)
      covH=np.cov(H)
      condH=LA.cond(covH)
@@ -649,7 +654,7 @@ ax.scatter(bestpoints[:3,0],bestpoints[:3,1],bestpoints[:3,2],s=70, c='b')
 ax.scatter(bestpoints[:3,3],bestpoints[:3,4],bestpoints[:3,5],s=70, c='b') 
 plt.show()
 
-#a,b,r=a_b_r_spherical(cam)
+a,b,r=a_b_r_spherical(cam)
 #a=0.
 #b=0.
 #r=0.
@@ -669,3 +674,4 @@ err_R=mean_error_R(cam, Rotation)
 err_t=mean_error_t(cam,estimated_t)
 
 #print cam.P
+ 
