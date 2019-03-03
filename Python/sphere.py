@@ -540,20 +540,19 @@ def reprojection_error(imagepoints,DLTimage,points):
 
 
 #find R,t error: https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
-def mean_error_R(self,estimated_R):
-    er=abs((self.R[:3,:3])-(estimated_R[:3,:3]))
-    sumerr=sum(er)
-    meanerr=(1./9.)*(sumerr[0]+sumerr[1]+sumerr[2])
-    return meanerr
+def error_R(self,estimated_R):
+    error_r=np.dot(inv(self.R[:3,:3]),estimated_R[:3,:3])
+    ang = math.acos( ((error_r[0,0]+error_r[1,1]+error_r[2,2])-1.)/2. )
+    print ang*180/math.pi
+    return error_r
 
-def mean_error_t(self,estimated_t):
-    er=abs((self.t[:3,3])-(estimated_t[:3,3]))
-    #squareerr=(self.t[:3,3])-(estimated_t[:3,3])*(self.t[:3,3])-(estimated_t[:3,3])
-    #print er
-    sumerr=sum(er)
-    meanert=(1./3.)*(sumerr)
-    return meanert
-    #return meanerr
+def error_t(self,estimated_t):
+    ertx=((estimated_t[0,3]-self.t[0,3])*(estimated_t[0,3]-self.t[0,3]))
+    erty=((estimated_t[1,3]-self.t[1,3])*(estimated_t[1,3]-self.t[1,3]))
+    ertz=((estimated_t[2,3]-self.t[2,3])*(estimated_t[2,3]-self.t[2,3]))
+    normt=math.sqrt((self.t[0,3]*self.t[0,3])+(self.t[1,3]*self.t[1,3])+(self.t[2,3]*self.t[2,3]))
+    total_error=math.sqrt(ertx+erty+ertz)/normt   
+    return total_error    
     
 def estimateRwithQRfact(H):
 #p. 31 https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws13-14/3DCV_lec05_parameterEstimation.pdf   
@@ -591,7 +590,7 @@ error=1000000000000.
 noise = np.random.normal(0,1,(2,6))
 print noise
 
-for p in range(10):
+for p in range(1000):
      worldpoints = spherepoints(6,3)
      imagePoints= cam.project(worldpoints, False)
      #H=DLT3D(cam,worldpoints,imagePoints,True)
@@ -600,12 +599,17 @@ for p in range(10):
      #imagepoints_noise=add_noise(imagePoints,noise,0.,0)
      imagepoints_noise=stand_add_noise(imagePoints,noise)
      H=DLT3D(cam,worldpoints, imagepoints_noise, False)
+     
+     cam_center=camera_center(H)  
+     estimated_t=estimate_t(cam,cam_center)
+     Rotation=estimateRwithQRfact(H)
      DLTimage=DLTproject(H,worldpoints)
+     err_t=error_t(cam,estimated_t)
      error_withnoise=reprojection_error(imagePoints,DLTimage,6)
      covH=np.cov(H)
      condH=LA.cond(covH)
-     if condH<mincondH:
-         mincondH=condH
+     if err_t<mincondH:
+         mincondH=err_t
          bestpoints=worldpoints
      if error_withnoise<error:
          error=error_withnoise
@@ -613,35 +617,13 @@ for p in range(10):
          bestH=H
      
      print p    
-     with open('dataerror.csv', 'ab') as csvfile:
-          filewriter = csv.writer(csvfile, delimiter=' ')
-          filewriter.writerow([error_withnoise , worldpoints])
- 
-
-#x = []
-#y = []
-#with open('dataerror.csv','r') as csvfile:
- #        plots = csv.reader(csvfile, delimiter=' ')
-  #       for column in plots:
-   #       x.append((float(column[1])))
-    #      y.append(float(column[0]))
-
-     #    plt.plot(x,y, label='Loaded from file!')
-      #   plt.xlabel('noise added')
-       #  plt.ylabel('error_withnoise')
-        # plt.title('reprojectionerror as we increase noise')
-         #plt.legend()
-         #plt.show()
-
-#NoNoiseTest
-#
+    
 
 
-#NoiseTest
 
-cam_center=camera_center(bestH)
-estimated_t=estimate_t(cam,cam_center)
-Rotation=estimateRwithQRfact(bestH)
+#cam_center=camera_center(bestH)
+#estimated_t=estimate_t(cam,cam_center)
+#Rotation=estimateRwithQRfact(bestH)
 fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
     #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
 ax.scatter(bestnoerror[:3,1],bestnoerror[:3,2],bestnoerror[:3,3],s=70, c='r') 
@@ -670,8 +652,8 @@ a,b,r=a_b_r_spherical(cam)
 #print cam.P
 print cam.t
 
-err_R=mean_error_R(cam, Rotation)
-err_t=mean_error_t(cam,estimated_t)
+err_R=error_R(cam, Rotation)
+err_t=error_t(cam,estimated_t)
 
 #print cam.P
- 
+  
