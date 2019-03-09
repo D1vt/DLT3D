@@ -15,7 +15,7 @@ import numpy as np
 import math
 import random
 from vision.camera import Camera
-from python.Class_Sphere import Sphere
+from Python.Class_Sphere import Sphere
 from mayavi import mlab
 
 
