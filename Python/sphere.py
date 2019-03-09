@@ -6,6 +6,7 @@ Created on Sat Jan  5 15:41:33 2019
 @author: diana
 @class Camera & set_P, set_K, set_R_axisAngle, set_t, project developed by raultron
 """
+from vision import Camera
 import numpy as np 
 import scipy.linalg
 from random import randrange
@@ -24,100 +25,6 @@ with open('dataR.csv', 'w') as csvfile:
 with open('dataerror.csv', 'w') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')          
 
-
-class Camera(object):
-    """ Class for representing pin-hole cameras. """
-    def __init__(self):
-        """ Initialize P = K[R|t] camera model. """
-        self.P = np.eye(3,4)
-        self.K = np.eye(3, dtype=np.float32) # calibration matrix
-        self.R = np.eye(4, dtype=np.float32) # rotation
-        self.t = np.eye(4, dtype=np.float32) # translation
-        self.Rt = np.eye(4, dtype=np.float32)
-        self.fx = 1.
-        self.fy = 1.
-        self.cx = 0.
-        self.cy = 0.
-        self.img_width = 1280
-        self.img_height = 960
-
-    def set_P(self):
-        # P = K[R|t]
-        # P is a 3x4 Projection Matrix (from 3d euclidean to image)
-        #self.Rt = np.hstack((self.R, self.t))
-        self.P = np.dot(self.K, self.Rt[:3,:4])
-    
-    def set_K(self, fx = 1, fy = 1, cx = 0,cy = 0):
-        # K is the 3x3 Camera matrix
-        # fx, fy are focal lenghts expressed in pixel units
-        # cx, cy is a principal point usually at image center
-        self.fx = fx
-        self.fy = fy
-        self.cx = cx
-        self.cy = cy
-        self.K = np.mat([[fx, 0., cx],
-                      [0.,fy,cy],
-                      [0.,0.,1.]], dtype=np.float32)
-        self.set_P()
-
-
-    def set_width_heigth(self,width, heigth):
-        self.img_width = width
-        self.img_height = heigth
-
-    def update_Rt(self):
-        self.Rt = np.dot(self.t,self.R)
-    
-        self.set_P()
-
-    def set_R_axisAngle(self,x,y,z, alpha):
-        """  Creates a 3D [R|t] matrix for rotation
-        around the axis of the vector defined by (x,y,z)
-        and an alpha angle."""
-        #Normalize the rotation axis a
-        a = np.array([x,y,z])
-        a = a / np.linalg.norm(a)
-
-        #Build the skew symetric
-        a_skew = np.mat([[0,-a[2],a[1]], [a[2], 0., -a[0]], [-a[1], a[0], 0.]])
-        R = np.eye(4)
-        R[:3,:3] = expm(a_skew*alpha)
-        self.R = R
-        self.update_Rt()
-   
-
-    def set_R_mat(self,R):
-        self.R = R
-        self.update_Rt()
-
-
-    def set_t(self, x,y,z, frame = 'camera'):
-        #self.t = array([[x],[y],[z]])
-        self.t = np.eye(4)
-        if frame=='world':
-          cam_world = np.array([x,y,z,1.]).T
-          cam_t = np.dot(self.R,-cam_world)
-          self.t[:3,3] = cam_t[:3]
-        else:
-          self.t[:3,3] = np.array([x,y,z])
-        self.update_Rt()
-
-
-
-    def get_world_position(self):
-        t = np.dot(inv(cam.Rt), np.array([0.,0.,0.,1.]))
-        return t
-
-
-    def project(self,X, quant_error=False):
-        """  Project points in X (4*n array) and normalize coordinates. """
-        self.set_P()
-        x = np.dot(self.P,X)
-        for i in range(x.shape[1]):
-          x[:,i] /= x[2,i]
-        if(quant_error):
-            x = np.around(x, decimals=0)
-        return x
 
    
 def spherepoints(points,r):
