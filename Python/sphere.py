@@ -413,26 +413,30 @@ def jacobian_matrix(self,a,b,r,worldpoints):
      return Jac,JacT
  
 def calculate_best_a(self,worldpoints,imagepoints,b,r):
-   #1.57079632679
+    """Find a(angle) that leads to the minimum condition number==the well conditioned matrix. 
+    With a limited from -pi/2 to pi/2. 
+    The minimum condition number of the cov matrix will give the best a angle, when 
+    r, b are constants (origin). 
+    The maximum condition number of the cov matrix will give the worst a angle, when 
+    r, b are constants (origin). """
     best=2*math.pi
     worst=best
     mincond=1000000000.
     maxcond=-1
-    
- #a is limited from -pi/2 to p/2. Minimum cond number of the cov matrix == best a angle and Maximum cond number of the cov matrix==worst a angle
+
     for a in np.arange(-90., 95.,5.):
  
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,np.rad2deg(a),b,r))
         cond=LA.cond(covmat)
-        with open('dataA.csv', 'ab') as csvfile:
+        with open('dataA.csv', 'ab') as csvfile: #crete a csv to save and the plot the measurments for a
           filewriter = csv.writer(csvfile, delimiter=' ')
           filewriter.writerow([cond , a])
           
         if cond<=mincond:
             mincond=cond
-            best=a
+            best=a  #best angle
         if cond>=maxcond:
-            maxcond=cond
+            maxcond=cond  #worst angle
             worst=a
     x = []
     y = []
@@ -443,9 +447,9 @@ def calculate_best_a(self,worldpoints,imagepoints,b,r):
           y.append(float(column[0]))
 
          plt.plot(x,y, label='Loaded from file!')
-         plt.xlabel('a angle')
+         plt.xlabel('a angle(*degrees)')
          plt.ylabel('condition number')
-         plt.title('Relationship between a angle &Condition number of cov. matrix')
+         plt.title('Relationship between a angle & Condition number of cov. matrix')
          plt.legend()
          plt.show()
     
@@ -453,16 +457,17 @@ def calculate_best_a(self,worldpoints,imagepoints,b,r):
 
 
 def calculate_best_r(self,worldpoints,imagepoints,b,a):
-   #1.57079632679
+    """Find r(radius) that lead to the minimum condition number==the well conditioned matrix. 
+    With r>0  """
     best=-1.
     mincond=1000000000.
     covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,100))
     #condmax=LA.cond(covmat)
- #r>0 so I tested many cases after 1 worst
+    #r>0 so I tested many cases after 1 worst
     for r in np.arange(0.0,3.2,0.2):
         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
         cond=LA.cond(covmat)
-        with open('dataR.csv', 'ab') as csvfile:
+        with open('dataR.csv', 'ab') as csvfile:  #crete a csv to save and the plot the measurments
           filewriter = csv.writer(csvfile, delimiter=' ')
           #filewriter.writerow([float(cond)/condmax , r/100.])
           filewriter.writerow([float(cond) , r])
@@ -480,96 +485,54 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
           y.append((float(column[0])))
 
          plt.plot(x,y, label='Loaded from file!')
-         plt.xlabel('r distance')
+         plt.xlabel('r distance(*m)')
          plt.ylabel('condition number')
-         plt.title('Relationship between distance&Condition number of cov. matrix')
+         plt.title('Relationship between distance& Condition number of cov. matrix')
          plt.legend()
          plt.show()
-
-
         
     return best
-#https://en.wikipedia.org/wiki/Reprojection_error
-def reprojection_error(imagepoints,DLTimage,points):
-    repr_error=0.
-    for size in range(points):
-     distance=math.sqrt((imagepoints[0,size]-DLTimage[0,size])*(imagepoints[0,size]-DLTimage[0,size])+(imagepoints[1,size]-DLTimage[1,size])*(imagepoints[1,size]-DLTimage[1,size]))
-     repr_error=distance+repr_error
-    return repr_error
 
+#------------------------------------test cases------------------------------------------------------------------------------------------
 
-#find R,t error: https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
-def error_R(self,estimated_R):
-    error_r=np.dot(inv(self.R[:3,:3]),estimated_R[:3,:3])
-    ang = math.acos( ((error_r[0,0]+error_r[1,1]+error_r[2,2])-1.)/2. )
-    print ang*180/math.pi
-    return error_r
-
-def error_t(self,estimated_t):
-    ertx=((estimated_t[0,3]-self.t[0,3])*(estimated_t[0,3]-self.t[0,3]))
-    erty=((estimated_t[1,3]-self.t[1,3])*(estimated_t[1,3]-self.t[1,3]))
-    ertz=((estimated_t[2,3]-self.t[2,3])*(estimated_t[2,3]-self.t[2,3]))
-    normt=math.sqrt((self.t[0,3]*self.t[0,3])+(self.t[1,3]*self.t[1,3])+(self.t[2,3]*self.t[2,3]))
-    total_error=math.sqrt(ertx+erty+ertz)/normt   
-    return total_error    
-    
-def estimateRwithQRfact(H):
-#p. 31 https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws13-14/3DCV_lec05_parameterEstimation.pdf   
-   
-    Q,B=scipy.linalg.qr((H[:3,:3]))
-    #print B
-    for i in range(3):
-     if B[i,i]<0.:
-        B[i,:] = -B[i,:]   
-        Q[:,i] = -Q[:,i]
-    Rot=Q
-    if np.linalg.det(Rot)<0. :  
-      Rot= - Rot
-    #Final estimated pose
-    Rot1=  np.transpose(Rot)
-    print Rot1
-    est_R=np.array([[Rot1[0,0],Rot1[0,1],Rot1[0,2],0.],
-                   [Rot1[1,0],Rot1[1,1],Rot1[1,2],0.],
-                   [Rot1[2,0],Rot1[2,1],Rot1[2,2],0.],
-                   [0.,0.,0.,1.]])
-    return est_R
-
-
-#values
 cam=Camera()
 cam.set_K(fx = 800.,fy = 800.,cx = 640.,cy = 480.)
 cam.set_width_heigth(960,960)
 imagePoints=np.full((2,6),0.0)
 cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 cam.set_t(0.0,-0.0,0.5, frame='world')
+#worldpoints = spherepoints(6,3)
+#H=DLT3D(cam,worldpoints,imagePoints,True)
+#DLTimage=DLTproject(H,worldpoints)
 
+#---------------------------------------Test case using a,b,r spherical coordinates----------------------------------------------------------------------
 
+#a,b,r=a_b_r_spherical(cam)
+#worldpoints = spherepoints(6,3)
+#covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
+#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+#worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,rbest)
+
+#------------------Find best points, that gives the minimum error to DLT----------------------------------------------------------------
 mincondH=1000000000.
 error=1000000000000.
-noise = np.random.normal(0,1,(2,6))
-print noise
+noise = np.random.normal(0,1,(2,6))  #add same noise to each random configuration of worldpoints
 
-for p in range(1000):
+for p in range(1000): #choose how many random test we will do to find the confi. that leads to the minimum error
      worldpoints = spherepoints(6,3)
      imagePoints= cam.project(worldpoints, False)
      #H=DLT3D(cam,worldpoints,imagePoints,True)
      #DLTimage=DLTproject(H,worldpoints)
      
-     #imagepoints_noise=add_noise(imagePoints,noise,0.,0)
      imagepoints_noise=stand_add_noise(imagePoints,noise)
      H=DLT3D(cam,worldpoints, imagepoints_noise, False)
      
      cam_center=camera_center(H)  
      estimated_t=estimate_t(cam,cam_center)
-     Rotation=estimateRwithQRfact(H)
+     Rotation=estimate_R_withQR(H)
      DLTimage=DLTproject(H,worldpoints)
      err_t=error_t(cam,estimated_t)
      error_withnoise=reprojection_error(imagePoints,DLTimage,6)
-     covH=np.cov(H)
-     condH=LA.cond(covH)
-     if err_t<mincondH:
-         mincondH=err_t
-         bestpoints=worldpoints
      if error_withnoise<error:
          error=error_withnoise
          bestnoerror=worldpoints
@@ -577,42 +540,15 @@ for p in range(1000):
      
      print p    
     
-
-
-
-#cam_center=camera_center(bestH)
-#estimated_t=estimate_t(cam,cam_center)
-#Rotation=estimateRwithQRfact(bestH)
-fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
-    #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
-ax.scatter(bestnoerror[:3,1],bestnoerror[:3,2],bestnoerror[:3,3],s=70, c='r') 
-ax.scatter(bestnoerror[:3,0],bestnoerror[:3,4],bestnoerror[:3,5],s=70, c='r') 
-plt.show()
-
-fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
-    #ax.plot_wireframe(radius*x, radius*y, radius*z, color='g')
-ax.scatter(bestpoints[:3,0],bestpoints[:3,1],bestpoints[:3,2],s=70, c='b') 
-ax.scatter(bestpoints[:3,3],bestpoints[:3,4],bestpoints[:3,5],s=70, c='b') 
-plt.show()
-
-a,b,r=a_b_r_spherical(cam)
-#a=0.
-#b=0.
-#r=0.
-#covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
-#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
-#worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,rbest)
-
-#
- #if error<minerror:
-  # minerror=error
-   #bestpointconfig=worldpoints
-   
-#print cam.P
-print cam.t
-
+cam_center=camera_center(bestH)
+estimated_t=estimate_t(cam,cam_center)
+Rotation=estimate_R_withQR(bestH)
 err_R=error_R(cam, Rotation)
 err_t=error_t(cam,estimated_t)
 
-#print cam.P
-  
+#---------------------------------------Plot the best points configuration----------------------------------------------------------------------
+fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
+    
+ax.scatter(bestnoerror[:3,1],bestnoerror[:3,2],bestnoerror[:3,3],s=70, c='r') 
+ax.scatter(bestnoerror[:3,0],bestnoerror[:3,4],bestnoerror[:3,5],s=70, c='r') 
+plt.show()
