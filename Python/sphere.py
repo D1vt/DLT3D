@@ -4,7 +4,6 @@
 Created on Sat Jan  5 15:41:33 2019
 /
 @author: diana
-@class Camera & set_P, set_K, set_R_axisAngle, set_t, project developed by raultron
 """
 from vision.camera import Camera
 import numpy as np 
@@ -132,6 +131,38 @@ def camera_center(H):
     cam_center=np.dot(Q,b)
    
     return cam_center
+def check_valid_radius(self,number,imagepoints):
+  """Check whether the projected points are inside the imageframe or not"""
+  wrongradius=False
+  minimumx=100000000000
+  minimumy=minimumx
+  maximumx=-10000
+  maximumy=maximumx
+  for i in range(number): 
+    #if((imagepoints[0,i])*(imagepoints[0,i])+(imagepoints[1,i])*(imagepoints[1,i])>(cam.img_width)*(cam.img_width)+(cam.img_height)*(cam.img_height)):
+     #   wrongradius=True
+    if(imagepoints[0,i]<minimumx):
+        minimumx=imagepoints[0,i]
+    if(imagepoints[0,i]>maximumx):
+        maximumx=imagepoints[0,i]
+    if(imagepoints[1,i]<minimumy):
+        minimumy=imagepoints[1,i]
+    if(imagepoints[1,i]>maximumy):
+        maximumy=imagepoints[1,i]
+  if(minimumx*maximumx<0):      
+   diffx=abs(maximumx)+abs(minimumx)
+  else:
+      diffx=abs(abs(maximumx)-abs(minimumx))
+  if(minimumy*maximumy<0):  
+   diffy=abs(maximumy)+abs(minimumy)
+  else:
+      diffy=abs(abs(maximumy)-abs(minimumy))
+  print diffx,diffy, self.img_width
+  if ((diffx<=self.img_width and diffy<=self.img_height) or (diffx<=self.img_height and diffy<=self.img_width )):
+    wrongradius=False
+  else: 
+    wrongradius=True
+  return wrongradius 
 
 
  
