@@ -48,9 +48,9 @@ class Sphere(object):
             radius=random.uniform(0,r)
             while(radius==0):
               radius=random.uniform(0,r)
-            worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))
-            worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))
-            worldpoints[2,k]=radius*(math.cos(theta))
+            worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))+self.origin[0]
+            worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))+self.origin[1]
+            worldpoints[2,k]=radius*(math.cos(theta))+self.origin[2]
             if(k>1):
                for j in range(k-1,0,-1):
                 distancex=(worldpoints[0,k]-worldpoints[0,j])*(worldpoints[0,k]-worldpoints[0,j])
@@ -63,9 +63,9 @@ class Sphere(object):
                       radius=random.uniform(0,r)
                       while(radius==0):
                         radius=random.uniform(0,r)
-                      worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))
-                      worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))
-                      worldpoints[2,k]=radius*(math.cos(theta))
+                      worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))+self.origin[0]
+                      worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))+self.origin[1]
+                      worldpoints[2,k]=radius*(math.cos(theta))+self.origin[2]
                       j=k-1
         self.sphere_points=worldpoints
         return worldpoints
