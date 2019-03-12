@@ -6,6 +6,7 @@ Created on Sat Jan  5 15:41:33 2019
 @author: diana
 """
 from vision.camera import Camera
+from  python.sphere import Sphere
 import numpy as np 
 import scipy.linalg
 from random import randrange
@@ -16,6 +17,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
+from vision.plot_tools import plot3D
 import csv
 with open('dataA.csv', 'w') as csvfile:
           filewriter = csv.writer(csvfile, delimiter=' ')
@@ -26,24 +28,7 @@ with open('dataerror.csv', 'w') as csvfile:
 
 
    
-def spherepoints(points,r):
-    """ Select a specific number of points(points) from a sphere with a specific radius(r) """
-    worldpoints=np.full((4,points),1.0)
-    for k in range(points):
-     theta=random.uniform(0.,math.pi)  #theta is between 0 and pi 
-     phi=random.uniform(0.,2*math.pi) #phi is between 0 and 2pi
-     radius=random.uniform(0,r)       #in order to belong to the sphere it should be inside it or have the same radius
-     while(radius==0):              
-         radius=random.uniform(0,r)   #check the error case
-     """Convert spherical r,phi,theta to cartesian x,y,z"""    
-     worldpoints[0,k]=radius*(math.sin(theta)*math.cos(phi))
-     worldpoints[1,k]=radius*(math.sin(theta)*math.sin(phi))
-     worldpoints[2,k]=radius*(math.cos(theta))
-    fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
-    ax.scatter(worldpoints[:3,1],worldpoints[:3,2],worldpoints[:3,3],s=70, c='r') 
-    ax.scatter(worldpoints[:3,0],worldpoints[:3,4],worldpoints[:3,5],s=70, c='r') 
-    plt.show()
-    return worldpoints
+
 
 def normalize(points,size=2):
      """Normalize image points, source: 
@@ -131,6 +116,8 @@ def camera_center(H):
     cam_center=np.dot(Q,b)
    
     return cam_center
+   
+   
 def check_valid_radius(self,number,imagepoints):
   """Check whether the projected points are inside the imageframe or not"""
   wrongradius=False
@@ -442,6 +429,54 @@ def jacobian_matrix(self,a,b,r,worldpoints):
      
     
      return Jac,JacT
+    
+def drawEllipsoid(a,b,c,xp,yp,zp):
+    """
+   Create the ellipsoids for the covariance matrices
+    """
+    fig = plt.figure(figsize=plt.figaspect(1))  
+    ax = fig.add_subplot(111, projection='3d')
+    ax = plt.gca()
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
+  
+
+
+    #possible angles in spherical coordinates
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
+    
+    #convert to cartesian
+    x = a * np.outer(np.cos(u), np.sin(v)) + xp
+    y = b * np.outer(np.sin(u), np.sin(v)) + yp
+    z = c * np.outer(np.ones_like(u), np.cos(v)) + zp
+
+   
+    ax.contour(x, y, z, [xp], zdir='x', offset=xp,cmap=cm.coolwarm)
+    ax.contour(x, y, z, [yp], zdir='y', offset=yp, cmap=cm.coolwarm)
+    ax.contour(x, y, z, [zp], zdir='z', offset=zp, cmap=cm.coolwarm)
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+   
+    max_radius = max(a, b, c)
+    for axis in 'xyz':
+        getattr(ax, 'set_{}lim'.format(axis))((-max_radius-0.1, max_radius+0.1))
+
+    plt.show()
+    return [[x[1],x[2]],[y[0],y[1]],[z[0],z[1]]]
+ 
+def ellipsoids_changing_a(self,worldpoints,imagepoints,b,r):
+    """Draw ellipsoids, while changing only the a angle """
+  
+    
+    for d in np.arange(-1., 1.2,0.2):
+        a=-90.
+        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,np.rad2deg(a),b,r))
+        an,bn,cn=get_semi_axes_abc(covmat,0.75)
+        drawEllipsoid(an,bn,cn,d,math.sqrt(1-d*d),0)
+        a=a+18.
  
 def calculate_best_a(self,worldpoints,imagepoints,b,r):
     """Find a(angle) that leads to the minimum condition number==the well conditioned matrix. 
@@ -527,8 +562,9 @@ def calculate_best_r(self,worldpoints,imagepoints,b,a):
 #------------------------------------test cases------------------------------------------------------------------------------------------
 
 cam=Camera()
+sph=Sphere()
 cam.set_K(fx = 800.,fy = 800.,cx = 640.,cy = 480.)
-cam.set_width_heigth(960,960)
+cam.set_width_heigth(1280,960)
 imagePoints=np.full((2,6),0.0)
 cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 cam.set_t(0.0,-0.0,0.5, frame='world')
@@ -549,8 +585,8 @@ mincondH=1000000000.
 error=1000000000000.
 noise = np.random.normal(0,1,(2,6))  #add same noise to each random configuration of worldpoints
 
-for p in range(1000): #choose how many random test we will do to find the confi. that leads to the minimum error
-     worldpoints = spherepoints(6,3)
+for p in range(30000): #choose how many random test we will do to find the confi. that leads to the minimum error
+     worldpoints = sph.random_points(6,0.4)
      imagePoints= cam.project(worldpoints, False)
      #H=DLT3D(cam,worldpoints,imagePoints,True)
      #DLTimage=DLTproject(H,worldpoints)
@@ -560,17 +596,25 @@ for p in range(1000): #choose how many random test we will do to find the confi.
      
      cam_center=camera_center(H)  
      estimated_t=estimate_t(cam,cam_center)
+     err_t=error_t(cam,estimated_t)
      Rotation=estimate_R_withQR(H)
      DLTimage=DLTproject(H,worldpoints)
      err_t=error_t(cam,estimated_t)
      error_withnoise=reprojection_error(imagePoints,DLTimage,6)
+     
      if error_withnoise<error:
          error=error_withnoise
          bestnoerror=worldpoints
          bestH=H
      
      print p    
-    
+     
+sph.spherepoints=None
+sph.spherepoints=bestnoerror
+print sph.spherepoints
+cams = [cam]
+spheres = [sph]  
+plot3D(cams, spheres)  
 cam_center=camera_center(bestH)
 estimated_t=estimate_t(cam,cam_center)
 Rotation=estimate_R_withQR(bestH)
