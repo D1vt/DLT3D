@@ -520,6 +520,33 @@ def calculate_best_a(self,worldpoints,imagepoints,b,r):
          plt.show()
     
     return worst,best
+   
+def a_angle_deriv(self,worldpoints,imagepoints,b,r):
+        """Calculate best a angle of camera using the derivative of covariance matrices and then plot my results"""
+    
+        for a in np.arange(-90.,95.,5.):
+         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,np.rad2deg(a),b,r))
+         deriv=(np.gradient(abs(covmat)))
+         #deriv=np.gradient(deriv_covariance)
+         print deriv , np.linalg.norm(deriv)
+         with open('dataA.csv', 'ab') as csvfile:  #crete a csv to save and the plot the measurments
+          filewriter = csv.writer(csvfile, delimiter=' ')
+          #filewriter.writerow([float(cond)/condmax , r/100.])
+          filewriter.writerow([float(np.linalg.norm(deriv)) , a])
+        x = []
+        y = []
+        with open('dataA.csv','r') as csvfile:
+          plots = csv.reader(csvfile, delimiter=' ')
+          for column in plots:
+           x.append((float(column[1])))
+           y.append((float(column[0])))
+ 
+        plt.plot(x,y, label='Loaded from file!')
+        plt.xlabel('a angle(degrees)')
+        plt.ylabel('norm of deriv of covariance')
+        plt.title('Relationship between a angle & covariance matrix')
+        plt.legend()
+        plt.show()        
 
 
 def calculate_best_r(self,worldpoints,imagepoints,b,a):
