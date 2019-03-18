@@ -5,36 +5,32 @@ Created on Sat Jan  5 15:41:33 2019
  /
 @author: diana
 """
-from vision.camera import Camera
-from  python.sphere import Sphere
-import numpy as np 
+import numpy as np
 import scipy.linalg
-from random import randrange
 import random
 from numpy import linalg as LA
 from scipy.linalg import expm, inv
 import math
 import matplotlib.pyplot as plt
-from matplotlib import pyplot as plt
+from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
-from vision.plot_tools import plot3D
+from mayavi import mlab
 import csv
 with open('dataA.csv', 'w') as csvfile:
-          filewriter = csv.writer(csvfile, delimiter=' ')
+    filewriter = csv.writer(csvfile, delimiter=' ')
 with open('dataR.csv', 'w') as csvfile:
-          filewriter = csv.writer(csvfile, delimiter=' ')
+    filewriter = csv.writer(csvfile, delimiter=' ')
 with open('dataerror.csv', 'w') as csvfile:
-          filewriter = csv.writer(csvfile, delimiter=' ')          
+    filewriter = csv.writer(csvfile, delimiter=' ')
+mlab.clf()      
 
-
-   
-
-
-def normalize(points,size=2):
-     """Normalize image points, source: 
-     https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf """
-     pointsnorm=np.dot(inv(cam.K),points)
-     return pointsnorm  
+def normalize(points, size=2):
+    """
+ Normalize image points, source:
+ https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
+    """
+    pointsnorm = np.dot(inv(cam.K), points)
+    return pointsnorm
 
 def DLT3D(self,worldpoints, imagepoints, normalization=False):
     """ This function calculates the final H matrix, using DLT algorithm for 3D points """
@@ -69,403 +65,440 @@ def DLT3D(self,worldpoints, imagepoints, normalization=False):
    
     return H      
 
+
 def estimate_R_withQR(H):
-    """ A function to estimate the rotation matrix R, using the H matrix, that was calculated from DLT algorithm.
-    To do that we use the QR Decomposition.
-    Source: p. 31 https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws13-14/3DCV_lec05_parameterEstimation.pdf   """
-    Q,B=scipy.linalg.qr((H[:3,:3]))
+    """
+    A function to estimate the rotation matrix R, using the H matrix, that was
+    calculated from DLT algorithm.
+    To do that we use the QR Decomposition. Source: p. 31
+    https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws13-14/3DCV_lec05_parameterEstimation.pdf
+    """
+    Q, B = scipy.linalg.qr((H[:3, :3]))
     for i in range(3):
-     if B[i,i]<0.:
-        B[i,:] = -B[i,:]   
-        Q[:,i] = -Q[:,i]
-    Rot=Q
-    if np.linalg.det(Rot)<0. :  
-      Rot= - Rot
-    #Final estimated pose
-    Rot1=  np.transpose(Rot)
-    print Rot1
-    est_R=np.array([[Rot1[0,0],Rot1[0,1],Rot1[0,2],0.],
-                   [Rot1[1,0],Rot1[1,1],Rot1[1,2],0.],
-                   [Rot1[2,0],Rot1[2,1],Rot1[2,2],0.],
-                   [0.,0.,0.,1.]])
+        if B[i, i] < 0.:
+            B[i, :] = - B[i, :]
+            Q[:, i] = - Q[:, i]
+    Rot = Q
+    if np.linalg.det(Rot) < 0.:
+        Rot = -Rot
+    # Final estimated pose
+    Rot1 = np.transpose(Rot)
+    # print Rot1
+    est_R = np.array([[Rot1[0, 0], Rot1[0, 1], Rot1[0, 2], 0.],
+                      [Rot1[1, 0], Rot1[1, 1], Rot1[1, 2], 0.],
+                      [Rot1[2, 0], Rot1[2, 1], Rot1[2, 2], 0.],
+                      [0., 0., 0., 1.]])
     return est_R
 
-def estimate_t(self,cam_center):
-    """ A function to estimate the translation t, using the H matrix, that was found from DLT algorithm
-    Source: Multiple View Geometry Richard Hartley and Andrew Zisserman, p.15 decompose P to K,R,t matrices"""
-    est_trans=np.array([[1.,0.,0.,abs(cam_center[0])],
-                    [0.,1.,0.,abs(cam_center[1])],
-                    [0.,0.,1.,abs(cam_center[2])],
-                    [0.,0.,0.,1.]])
+
+def estimate_t(self, cam_center):
+    """
+    A function to estimate the translation t, using the H matrix,
+    that was found from DLT algorithm
+    Source: Multiple View Geometry Richard Hartley and Andrew Zisserman,
+    p.15 decompose P to K,R,t matrices
+    """
+    est_trans = np.array([[1., 0., 0., abs(cam_center[0])],
+                          [0., 1., 0., abs(cam_center[1])],
+                          [0., 0., 1., abs(cam_center[2])],
+                          [0., 0., 0., 1.]])
 
     return est_trans
-       
 
 
 def camera_center(H):
-    """ A function to estimate the camera center, using the H matrix, that was found from DLT algorithm
-    Source: https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf """
-    Q=np.array([[H[0,0],H[0,1],H[0,2]],
-               [H[1,0],H[1,1],H[1,2]],
-               [H[2,0],H[2,1],H[2,2]]])
-    b=np.array([[H[0,3]],
-                [H[1,3]],
-                [H[2,3]]])
-    Q=-inv(Q)
-  
-    cam_center=np.dot(Q,b)
-   
+    """
+    A function to estimate the camera center, using the H matrix, that was
+    found from DLT algorithm. Source:
+    https://s3.amazonaws.com/content.udacity-data.com/courses/ud810/slides/Unit-3/3C-L3.pdf
+    """
+    Q = np.array([[H[0, 0], H[0, 1], H[0, 2]],
+                  [H[1, 0], H[1, 1], H[1, 2]],
+                  [H[2, 0], H[2, 1], H[2, 2]]])
+    b = np.array([[H[0, 3]],
+                  [H[1, 3]],
+                  [H[2, 3]]])
+    Q = -inv(Q)
+    cam_center = np.dot(Q, b)
     return cam_center
    
-   
-def check_valid_radius(self,number,imagepoints):
-  """Check whether the projected points are inside the imageframe or not"""
-  wrongradius=False
-  minimumx=100000000000
-  minimumy=minimumx
-  maximumx=-10000
-  maximumy=maximumx
-  for i in range(number): 
-    #if((imagepoints[0,i])*(imagepoints[0,i])+(imagepoints[1,i])*(imagepoints[1,i])>(cam.img_width)*(cam.img_width)+(cam.img_height)*(cam.img_height)):
-     #   wrongradius=True
-    if(imagepoints[0,i]<minimumx):
-        minimumx=imagepoints[0,i]
-    if(imagepoints[0,i]>maximumx):
-        maximumx=imagepoints[0,i]
-    if(imagepoints[1,i]<minimumy):
-        minimumy=imagepoints[1,i]
-    if(imagepoints[1,i]>maximumy):
-        maximumy=imagepoints[1,i]
-  if(minimumx*maximumx<0):      
-   diffx=abs(maximumx)+abs(minimumx)
-  else:
-      diffx=abs(abs(maximumx)-abs(minimumx))
-  if(minimumy*maximumy<0):  
-   diffy=abs(maximumy)+abs(minimumy)
-  else:
-      diffy=abs(abs(maximumy)-abs(minimumy))
-  print diffx,diffy, self.img_width
-  if ((diffx<=self.img_width and diffy<=self.img_height) or (diffx<=self.img_height and diffy<=self.img_width )):
-    wrongradius=False
-  else: 
-    wrongradius=True
-  return wrongradius 
-
+def check_valid_radius(self, number, imagepoints):
+    """
+    Check whether the projected points are inside the imageframe or not
+    """
+    wrongradius = False
+    minimumx = 100000000000
+    minimumy = minimumx
+    maximumx = -10000
+    maximumy = maximumx
+    for i in range(number):
+        if(imagepoints[0, i] < minimumx):
+            minimumx = imagepoints[0, i]
+        if(imagepoints[0, i] > maximumx):
+            maximumx = imagepoints[0, i]
+        if(imagepoints[1, i] < minimumy):
+            minimumy = imagepoints[1, i]
+        if(imagepoints[1, i] > maximumy):
+            maximumy = imagepoints[1, i]
+        if(minimumx * maximumx < 0):
+            diffx = abs(maximumx) + abs(minimumx)
+        else:
+            diffx = abs(abs(maximumx) - abs(minimumx))
+        if(minimumy * maximumy < 0):
+            diffy = abs(maximumy)+abs(minimumy)
+        else:
+            diffy = abs(abs(maximumy)-abs(minimumy))
+        if ((diffx <= self.img_width and diffy <= self.img_height) or (diffx <= self.img_height and diffy <= self.img_width)):
+            wrongradius = False
+        else:
+            wrongradius = True
+        return wrongradius
 
  
-def add_noise(imagepoints,sd=4.,mean=0., size=10000):
-   """Adding noise to each u,v of the image (random gaussian noise)""" 
-   if size==0:  
-    imagenoise=np.full((3,6),1.0)
-    
-    imagenoise[0,0]=imagepoints[0,0] +np.random.normal(mean,sd)
-    imagenoise[1,0]=imagepoints[1,0] +np.random.normal(mean,sd)
-    imagenoise[0,1]= imagepoints[0,1] +np.random.normal(mean,sd)
-    imagenoise[1,1]=imagepoints[1,1] +np.random.normal(mean,sd)
-    imagenoise[0,2]=imagepoints[0,2] +np.random.normal(mean,sd)
-    imagenoise[1,2]=imagepoints[1,2] +np.random.normal(mean,sd)
-    imagenoise[0,3]=imagepoints[0,3] +np.random.normal(mean,sd)
-    imagenoise[1,3]=imagepoints[1,3] +np.random.normal(mean,sd)
-    imagenoise[0,4]=imagepoints[0,4] +np.random.normal(mean,sd)
-    imagenoise[1,4]=imagepoints[1,4] +np.random.normal(mean,sd)
-    imagenoise[0,5]=imagepoints[0,5] +np.random.normal(mean,sd)
-    imagenoise[1,5]=imagepoints[1,5] +np.random.normal(mean,sd)
-    return imagenoise
-   else: 
-    px1=imagepoints[0,0] +np.random.normal(mean,sd,size)
-    py1=imagepoints[1,0] +np.random.normal(mean,sd,size)
-    px2=imagepoints[0,1] +np.random.normal(mean,sd,size)
-    py2=imagepoints[1,1] +np.random.normal(mean,sd,size)
-    px3=imagepoints[0,2] +np.random.normal(mean,sd,size)
-    py3=imagepoints[1,2] +np.random.normal(mean,sd,size)
-    px4=imagepoints[0,3] +np.random.normal(mean,sd,size)
-    py4=imagepoints[1,3] +np.random.normal(mean,sd,size)
-    px5=imagepoints[0,4] +np.random.normal(mean,sd,size)
-    py5=imagepoints[1,4] +np.random.normal(mean,sd,size)
-    px6=imagepoints[0,5] +np.random.normal(mean,sd,size)
-    py6=imagepoints[1,5] +np.random.normal(mean,sd,size)
-    imageNoise=np.array([[px1,px2,px3,px4,px5,px6],
-                        [py1,py2,py3,py4,py5,py6]])
-    return imageNoise        
+def add_noise(imagepoints, sd=4., mean=0., size=10000):
+    """
+    Adding noise to each u,v of the image (random gaussian noise)
+    """
+    if size == 0:
+        imagenoise = np.full((3, 6), 1.0)
+        imagenoise[0, 0] = imagepoints[0, 0] + np.random.normal(mean, sd)
+        imagenoise[1, 0] = imagepoints[1, 0] + np.random.normal(mean, sd)
+        imagenoise[0, 1] = imagepoints[0, 1] + np.random.normal(mean, sd)
+        imagenoise[1, 1] = imagepoints[1, 1] + np.random.normal(mean, sd)
+        imagenoise[0, 2] = imagepoints[0, 2] + np.random.normal(mean, sd)
+        imagenoise[1, 2] = imagepoints[1, 2] + np.random.normal(mean, sd)
+        imagenoise[0, 3] = imagepoints[0, 3] + np.random.normal(mean, sd)
+        imagenoise[1, 3] = imagepoints[1, 3] + np.random.normal(mean, sd)
+        imagenoise[0, 4] = imagepoints[0, 4] + np.random.normal(mean, sd)
+        imagenoise[1, 4] = imagepoints[1, 4] + np.random.normal(mean, sd)
+        imagenoise[0, 5] = imagepoints[0, 5] + np.random.normal(mean, sd)
+        imagenoise[1, 5] = imagepoints[1, 5] + np.random.normal(mean, sd)
+        return imagenoise
+    else:
+        px1 = imagepoints[0, 0] + np.random.normal(mean, sd, size)
+        py1 = imagepoints[1, 0] + np.random.normal(mean, sd, size)
+        px2 = imagepoints[0, 1] + np.random.normal(mean, sd, size)
+        py2 = imagepoints[1, 1] + np.random.normal(mean, sd, size)
+        px3 = imagepoints[0, 2] + np.random.normal(mean, sd, size)
+        py3 = imagepoints[1, 2] + np.random.normal(mean, sd, size)
+        px4 = imagepoints[0, 3] + np.random.normal(mean, sd, size)
+        py4 = imagepoints[1, 3] + np.random.normal(mean, sd, size)
+        px5 = imagepoints[0, 4] + np.random.normal(mean, sd, size)
+        py5 = imagepoints[1, 4] + np.random.normal(mean, sd, size)
+        px6 = imagepoints[0, 5] + np.random.normal(mean, sd, size)
+        py6 = imagepoints[1, 5] + np.random.normal(mean, sd, size)
+        imageNoise = np.array([[px1, px2, px3, px4, px5, px6],
+                               [py1, py2, py3, py4, py5, py6]])
+        return imageNoise     
 
-def stand_add_noise(imagepoints,noise):
-   
-    imagenoise=np.full((3,6),1.0)
-    
-    imagenoise[0,0]=imagepoints[0,0] +noise[0,0]
-    imagenoise[1,0]=imagepoints[1,0] +noise[1,0]
-    imagenoise[0,1]= imagepoints[0,1] +noise[0,1]
-    imagenoise[1,1]=imagepoints[1,1] +noise[1,1]
-    imagenoise[0,2]=imagepoints[0,2] +noise[0,2]
-    imagenoise[1,2]=imagepoints[1,2] +noise[1,2]
-    imagenoise[0,3]=imagepoints[0,3] +noise[0,3]
-    imagenoise[1,3]=imagepoints[1,3] +noise[1,3]
-    imagenoise[0,4]=imagepoints[0,4] +noise[0,4]
-    imagenoise[1,4]=imagepoints[1,4] +noise[1,4]
-    imagenoise[0,5]=imagepoints[0,5] +noise[0,5]
-    imagenoise[1,5]=imagepoints[1,5] +noise[1,5]
+
+def stand_add_noise(imagepoints, noise, points=6):
+    imagenoise = np.full((3, points), 1.0)
+    imagenoise[0, 0] = imagepoints[0, 0] + noise[0, 0]
+    imagenoise[1, 0] = imagepoints[1, 0] + noise[1, 0]
+    imagenoise[0, 1] = imagepoints[0, 1] + noise[0, 1]
+    imagenoise[1, 1] = imagepoints[1, 1] + noise[1, 1]
+    imagenoise[0, 2] = imagepoints[0, 2] + noise[0, 2]
+    imagenoise[1, 2] = imagepoints[1, 2] + noise[1, 2]
+    imagenoise[0, 3] = imagepoints[0, 3] + noise[0, 3]
+    imagenoise[1, 3] = imagepoints[1, 3] + noise[1, 3]
+    imagenoise[0, 4] = imagepoints[0, 4] + noise[0, 4]
+    imagenoise[1, 4] = imagepoints[1, 4] + noise[1, 4]
+    imagenoise[0, 5] = imagepoints[0, 5] + noise[0, 5]
+    imagenoise[1, 5] = imagepoints[1, 5] + noise[1, 5]
+    # imagenoise[0,6]=imagepoints[0,6] +noise[0,6]
+    # imagenoise[1,6]=imagepoints[1,6] +noise[1,6]
+    # imagenoise[0,7]=imagepoints[0,7] +noise[0,7]
+    # imagenoise[1,7]=imagepoints[1,7] +noise[1,7]
     return imagenoise
-        
+
     
-def DLTproject(H,X, quant_error=False):
-        """  Project points in X (4*n array) and normalize coordinates, using H that was calculated from DLT. """
-        x = np.dot(H,X)
+def DLTproject(H, X, quant_error=False):
+        """
+        Project points in X (6*n array) and normalize coordinates,
+        using H that was calculated from DLT.
+        """
+        x = np.dot(H, X)
         for i in range(x.shape[1]):
-          x[:,i] /= x[2,i]
+            x[:, i] /= x[2, i]
         if(quant_error):
             x = np.around(x, decimals=0)
         return x        
   
-#
-def reprojection_error(imagepoints,DLTimage,points):
-    """  Find reprojection error, caused by DLT. 
-    Source: https://en.wikipedia.org/wiki/Reprojection_error  """
-    repr_error=0.
+
+def reprojection_error(imagepoints, DLTimage, points):
+    """
+        Find reprojection error,
+        caused by DLT. Source:
+        https://en.wikipedia.org/wiki/Reprojection_error
+    """
+    repr_error = 0.
     for size in range(points):
-     distance=math.sqrt((imagepoints[0,size]-DLTimage[0,size])*(imagepoints[0,size]-DLTimage[0,size])+(imagepoints[1,size]-DLTimage[1,size])*(imagepoints[1,size]-DLTimage[1,size]))
-     repr_error=distance+repr_error
+        distance = math.sqrt((imagepoints[0, size]-DLTimage[0, size])*(imagepoints[0, size]-DLTimage[0, size])+(imagepoints[1, size]-DLTimage[1, size])*(imagepoints[1, size]-DLTimage[1, size]))
+        repr_error = distance+repr_error
     return repr_error
 
 
-#find R,t error: https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
-def error_R(self,estimated_R):
-    """ Find R error, caused from DLT.
-    Source:https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf"""
-    error_r=np.dot(inv(self.R[:3,:3]),estimated_R[:3,:3])
-    ang = math.acos( ((error_r[0,0]+error_r[1,1]+error_r[2,2])-1.)/2. )
-    print ang*180/math.pi
+# find R,t error: https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
+def error_R(self, estimated_R):
+    """
+    Find R error, caused from DLT.Source:
+    https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
+    """
+    error_r = np.dot(inv(self.R[:3, :3]), estimated_R[:3, :3])
+    ang = math.acos(((error_r[0, 0]+error_r[1, 1]+error_r[2, 2])-1.)/2.)
+    print ang * 180/math.pi
     return error_r
 
-def error_t(self,estimated_t):
-    """ Find t error, caused from DLT.
-    Source:https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf"""
-    ertx=((estimated_t[0,3]-self.t[0,3])*(estimated_t[0,3]-self.t[0,3]))
-    erty=((estimated_t[1,3]-self.t[1,3])*(estimated_t[1,3]-self.t[1,3]))
-    ertz=((estimated_t[2,3]-self.t[2,3])*(estimated_t[2,3]-self.t[2,3]))
-    normt=math.sqrt((self.t[0,3]*self.t[0,3])+(self.t[1,3]*self.t[1,3])+(self.t[2,3]*self.t[2,3]))
-    total_error=math.sqrt(ertx+erty+ertz)/normt   
-    return total_error    
-    
+def error_t(self, estimated_t):
+    """
+    Find t error, caused from DLT.Source:
+    https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
+    """
+    ertx = ((estimated_t[0, 3]-self.t[0, 3])*(estimated_t[0, 3]-self.t[0, 3]))
+    erty = ((estimated_t[1, 3]-self.t[1, 3])*(estimated_t[1, 3]-self.t[1, 3]))
+    ertz = ((estimated_t[2, 3]-self.t[2, 3])*(estimated_t[2, 3]-self.t[2, 3]))
+    normt = math.sqrt((self.t[0, 3]*self.t[0, 3])+(self.t[1, 3]*self.t[1, 3])+(self.t[2, 3]*self.t[2, 3]))
+    total_error = math.sqrt(ertx+erty+ertz)/normt
+    return total_error
 
 
 def a_b_r_spherical(self):
-    """ A function to calculate a,b,c from spherical coordinates"""
-    world_position = self.get_world_position()  
+    """
+    A function to calculate a,b,c from spherical coordinates
+    """
+    world_position = self.get_world_position()
     x = world_position[0]
     y = world_position[1]
     z = world_position[2]
-    r = np.sqrt(x * x + y * y + z * z,dtype=np.float32)
-    if r ==0:
+    r = np.sqrt(x * x + y * y + z * z, dtype=np.float32)
+    if r == 0:
         a = np.deg2rad(0.0)
     else:
         a = math.acos(z / r)
     if x == 0:
         b = np.deg2rad(90.0)
     else:
-       b = math.atan(y / x)
-    return a,b,r
+        b = math.atan(y / x)
+    return a, b, r
 
-def covariance_matrix_p(self,worldpoints,imagepoints,a,b,c):
-    """ Find the covariance matrix from R,t expressed in spherical coordinates 
-    The equation for the final cov matrix (given in Thesis Tracking Errors in AR (eq. 5.8) = inv(np.dot(np.dot(JacT,image6points), Jac)), 
-    where JacT is the transpose matrix of Jacobian matrix (in spherical coordinates) 
+
+def covariance_matrix_p(self, worldpoints, imagepoints, a, b, c):
     """
-   
-    Jac,JacT=jacobian_matrix(self,a,b,c,worldpoints)
-    
-    #adding noise to imagePoints
-    points=add_noise(imagepoints)
-    
-    
-    #Calculate the cov. matrix for each point in order to create the Σvi (eq. 5.8)
-    cov_mat_p1 = np.cov(points[0,0],points[1,0])
-    cov_mat_p2 = np.cov(points[0,1],points[1,1])
-    cov_mat_p3 = np.cov(points[0,2],points[1,2])
-    cov_mat_p4 = np.cov(points[0,3],points[1,3])
-    cov_mat_p5 = np.cov(points[0,4],points[1,4])
-    cov_mat_p6 = np.cov(points[0,5],points[1,5])
-    
-    
-    #create the 12*12 cov matrix, that has 0 everywhere except in the main diagonal
+    Find the covariance matrix from R,t expressed in spherical coordinates
+    The equation for the final cov matrix (given in Thesis Tracking Errors in
+    AR (eq. 5.8) = inv(np.dot(np.dot(JacT,image6points), Jac)),
+    where JacT is the transpose matrix of Jacobian matrix
+    (in spherical coordinates)
+    """
+    Jac, JacT = jacobian_matrix(self, a, b, c, worldpoints)
+    # adding noise to imagePoints
+    points = add_noise(imagepoints)
+    # Calculate cov. matrix for each point in order to create the Σvi(eq. 5.8)
+    cov_mat_p1 = np.cov(points[0, 0], points[1, 0])
+    cov_mat_p2 = np.cov(points[0, 1], points[1, 1])
+    cov_mat_p3 = np.cov(points[0, 2], points[1, 2])
+    cov_mat_p4 = np.cov(points[0, 3], points[1, 3])
+    cov_mat_p5 = np.cov(points[0, 4], points[1, 4])
+    cov_mat_p6 = np.cov(points[0, 5], points[1, 5])
+    # create the 12*12 cov matrix
     image6points = np.block([[cov_mat_p1, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
-                                      [np.zeros((2, 2)), cov_mat_p2, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
-                                       [np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p3, np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2))],
-                                       [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),cov_mat_p4, np.zeros((2, 2)), np.zeros((2, 2))],
-                                       [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), cov_mat_p5, np.zeros((2, 2))],
-                                       [np.zeros((2, 2)), np.zeros((2, 2)),np.zeros((2, 2)),np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
-    image6points=np.diag(np.diag( image6points))
-    #the eq. 5.8 uses the inv. cov. matrix of those points
-    image6points=inv(image6points)
-   
-    #find the final 3*3 matrix
-    cov_mat = inv(np.dot(np.dot(JacT,image6points), Jac))
-   
+                             [np.zeros((2, 2)), cov_mat_p2, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
+                             [np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p3, np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2))],
+                             [np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p4, np.zeros((2, 2)), np.zeros((2, 2))],
+                             [np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p5, np.zeros((2, 2))],
+                             [np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), np.zeros((2, 2)), cov_mat_p6]])
+    image6points = np.diag(np.diag(image6points))
+    # the eq. 5.8 uses the inv. cov. matrix of those points
+    image6points = inv(image6points)
+    # find the final 3*3 matrix
+    cov_mat = inv(np.dot(np.dot(JacT, image6points), Jac))
     return cov_mat
 
 
 def R_from_euler():
-    """ Find the R using Euler Angles, as defined in p. 51 of thesis Tracking Errors in Augmented Reality in Laparoscopic Surgeries
     """
-    a=math.atan(cam.R[2,1]/cam.R[2,2])
-    b=-math.asin(cam.R[2,0])
-    c=math.atan(cam.R[1,0]/cam.R[0,0])
-    #print a,b,c
-    R_Eu_a=np.array([[1.,0.,0.],
-                     [0.,math.cos(a),-math.sin(a)],
-                     [0.,math.sin(a),math.cos(a)]])
-    R_Eu_b=np.array([[math.cos(b),0.,math.sin(b)],
-                      [0.,1.,0.],
-                      [-math.sin(b),0.,math.cos(b)]])
-    R_Eu_c=np.array([[math.cos(c),-math.sin(c),0.],
-                      [math.sin(c),math.cos(c),0.],
-                      [0.,0.,1.]])
-    R_Eu1=np.dot(R_Eu_c,R_Eu_b)  #Rz*Ry*Rx
-    R_Eu=np.dot(R_Eu1,R_Eu_a)
-   
+    Find the R using Euler Angles, as defined in p. 51 of thesis Tracking
+    Errors in Augmented Reality in Laparoscopic Surgeries
+    """
+    a = math.atan(cam.R[2, 1]/cam.R[2, 2])
+    b = -math.asin(cam.R[2, 0])
+    c = math.atan(cam.R[1, 0]/cam.R[0, 0])
+    # print a,b,c
+    R_Eu_a = np.array([[1., 0., 0.],
+                       [0., math.cos(a), -math.sin(a)],
+                       [0., math.sin(a), math.cos(a)]])
+    R_Eu_b = np.array([[math.cos(b), 0., math.sin(b)],
+                       [0., 1., 0.],
+                       [-math.sin(b), 0., math.cos(b)]])
+    R_Eu_c = np.array([[math.cos(c), -math.sin(c), 0.],
+                       [math.sin(c), math.cos(c), 0.],
+                       [0., 0., 1.]])
+    R_Eu1 = np.dot(R_Eu_c, R_Eu_b)  # Rz*Ry*Rx
+    R_Eu = np.dot(R_Eu1, R_Eu_a)
     return R_Eu
 
 
- 
 
-def jacobian_uv(X,P,P_da,P_db,P_dc):
-     """  Find the u&v of each point as well as their derivatives (p. 81-82 in "Tracking Errors in in Augmented Reality in Laparoscopic Surgeries") 
-     """
-     Y=np.array([[X[0]],
-                [X[1]],
-                [X[2]],
-                [1.]])
-     
-     #image_points=np.dot(P,Y)
-     
-     image_point_da = np.dot(P_da,Y)  #find da
-     image_point_db = np.dot(P_db,Y)  #find db
-     image_point_dc = np.dot(P_dc,Y)  #find dc
-     u_da=  image_point_da[0] #find du/da
-     v_da=  image_point_da[1]  #find dv/da
-     u_db=image_point_db[0]  #find du/db
-     v_db=image_point_db[1]  #find dv/db
-     u_dc=image_point_dc[0]  #find du/dc
-     v_dc=image_point_dc[1]  #find dv/dc
-     return float(u_da),float(u_db),float(u_dc),float(v_da),float(v_db),float(v_dc) #2*3
- 
-        
-
-def jacobian_matrix(self,a,b,r,worldpoints):
-     """Calculate Jacobian matrix and transpose of the Jacobian matrix. But first there is a need
-     to calculate the following: dR/da, dR/db,dR/dr , dt/da , dt/db, dt/dr 
+def jacobian_uv(X, P, P_da, P_db, P_dc):
     """
-     R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
-                       [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
-                       [math.sin(a), 0., math.cos(a)]])
-     
-    #dR/da
-     dR_da=np.array([[math.cos(b)*(-math.sin(a)),0., math.cos(b)*math.cos(a)], 
-                          [math.sin(b)*(-math.sin(a)), 0., math.sin(b)*math.cos(a)],
-                          [(math.cos(a)), 0.,(-math.sin(a))] ]) 
-    #dR/db 
-     dR_db=np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
-                          [math.cos(b)*math.cos(a), (-math.sin(b)),(math.cos(b))*math.sin(a)],
-                          [0., 0., 0.]])
-     dR_dr=np.full((3,3),0.) 
-     R_Eu=R_from_euler()
-     #find the final R, t
-     R_Sphere_da=np.dot(dR_da,R_Eu[:3,:3])
-     R_Sphere_db=np.dot(dR_db,R_Eu[:3,:3])
-     R_Sphere_dr=np.dot(dR_dr,R_Eu[:3,:3])
-     R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
-     t_Sphere= np.array([[r*math.sin(a)*math.cos(b)],
-            [r*math.sin(b)*math.sin(a)],
-             [r*math.cos(a)]])
-     t_da=np.array([[r*math.cos(a)*math.cos(b)],
-            [r*math.sin(b)*math.cos(a)],
-             [r*(-math.sin(a))]])
-     t_db=np.array([[r*math.sin(a)*(-math.sin(b))],
-            [r*math.cos(b)*math.sin(a)],
-             [0.]])
-     t_dr=np.array([[math.sin(a)*math.cos(b)],
-            [math.sin(b)*math.sin(a)],
-             [math.cos(a)]])
-     t_Sphere_da=np.dot(R_Sphere_da, -t_Sphere)+np.dot(R_Sphere, -t_da)
-     t_Sphere_db=np.dot(R_Sphere_db, -t_Sphere)+np.dot(R_Sphere, -t_db)
-     t_Sphere_dr=np.dot(R_Sphere_dr, -t_Sphere)+np.dot(R_Sphere, -t_dr)
-     t_Sphere=np.dot(R_Sphere,-t_Sphere)
-     
-     #then I am using them to find the following: dRt/da , dRt/db, dRt/dc where a,b,c were calculated in a previous function
-     dRt_da=np.hstack((R_Sphere_da, t_Sphere_da))
-     dRt_db=np.hstack((R_Sphere_db, t_Sphere_db))
-     dRt_dr=np.hstack((R_Sphere_dr, t_Sphere_dr))
-     Rt_sphere=np.hstack((R_Sphere, t_Sphere))
-    
-     #I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in in Laparoscopic Surgeries"
-     P_da=np.dot(self.K,dRt_da)
-     P_db=np.dot(self.K,dRt_db)
-     P_dr=np.dot(self.K,dRt_dr)
-     P=np.dot(self.K,Rt_sphere)
-      
-     """then for each one of the world points I find the u,v and use them to calculate the Jacobian Matrix. 
-     So I need to calculate the followin for each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc"""
-     u1a,u1b,u1c,v1a,v1b,v1c=jacobian_uv(worldpoints[0,:],P,P_da,P_db,P_dr)
-     u2a,u2b,u2c,v2a,v2b,v2c=jacobian_uv(worldpoints[1,:],P,P_da,P_db,P_dr)
-     u3a,u3b,u3c,v3a,v3b,v3c=jacobian_uv(worldpoints[2,:],P,P_da,P_db,P_dr)
-     u4a,u4b,u4c,v4a,v4b,v4c=jacobian_uv(worldpoints[3,:],P,P_da,P_db,P_dr)
-     u5a,u5b,u5c,v5a,v5b,v5c=jacobian_uv(worldpoints[4,:],P,P_da,P_db,P_dr)
-     u6a,u6b,u6c,v6a,v6b,v6c=jacobian_uv(worldpoints[5,:],P,P_da,P_db,P_dr)
-    
-     #12*3 Jacobian Matrix
-     Jac=np.array([[u1a,u1b,u1c],
-                    [u2a,u2b,u2c],
-                    [u3a,u3b,u3c],
-                    [u4a,u4b,u4c],
-                    [u5a,u5b,u5c],
-                    [u6a,u6b,u6c],
-                    [v1a,v1b,v1c],
-                    [v2a,v2b,v2c],
-                    [v3a,v3b,v3c],
-                    [v4a,v4b,v4c],
-                    [v5a,v5b,v5c],
-                    [v6a,v6b,v6c]])
-     
-     JacT=np.transpose(Jac)
-     
-    
-     return Jac,JacT
-    
-def drawEllipsoid(a,b,c,xp,yp,zp):
+    Find the u&v of each point as well as their derivatives p.81-82 in
+    "Tracking Errors in in Augmented Reality in Laparoscopic Surgeries"
+    """
+    Y = np.array([[X[0]],
+                  [X[1]],
+                  [X[2]],
+                  [1.]])
+    # image_points=np.dot(P,Y)
+    image_point_da = np.dot(P_da, Y)  # find da
+    image_point_db = np.dot(P_db, Y)  # find db
+    image_point_dc = np.dot(P_dc, Y)  # find dc
+    u_da = image_point_da[0]  # find du/da
+    v_da = image_point_da[1]  # find dv/da
+    u_db = image_point_db[0]  # find du/db
+    v_db = image_point_db[1]  # find dv/db
+    u_dc = image_point_dc[0]  # find du/dc
+    v_dc = image_point_dc[1]  # find dv/dc
+    return float(u_da), float(u_db), float(u_dc), float(v_da), float(v_db), float(v_dc)
+
+
+def jacobian_matrix(self, a, b, r, worldpoints):
+    """
+    Calculate Jacobian matrix and transpose of the Jacobian matrix.
+    But first there is a need
+    to calculate the following: dR/da, dR/db,dR/dr , dt/da , dt/db, dt/dr
+    """
+    R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b), math.cos(b)*math.sin(a)],
+                         [math.sin(b)*math.cos(a), math.cos(b), math.sin(b)*math.sin(a)],
+                         [math.sin(a), 0., math.cos(a)]])
+    # dR/da
+    dR_da = np.array([[math.cos(b)*(-math.sin(a)), 0., math.cos(b)*math.cos(a)],
+                      [math.sin(b)*(-math.sin(a)), 0., math.sin(b)*math.cos(a)],
+                      [(math.cos(a)), 0., (-math.sin(a))]])
+    # dR/db
+    dR_db = np.array([[(-math.sin(b))*math.cos(a), -math.cos(b), (-math.sin(b))*math.sin(a)],
+                      [math.cos(b)*math.cos(a), (-math.sin(b)), (math.cos(b))*math.sin(a)],
+                      [0., 0., 0.]])
+    dR_dr = np.full((3, 3), 0.)
+    R_Eu = R_from_euler()
+    # find the final R, t
+    R_Sphere_da = np.dot(dR_da, R_Eu[:3, :3])
+    R_Sphere_db = np.dot(dR_db, R_Eu[:3, :3])
+    R_Sphere_dr = np.dot(dR_dr, R_Eu[:3, :3])
+    R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
+    t_Sphere = np.array([[r*math.sin(a)*math.cos(b)],
+                         [r*math.sin(b)*math.sin(a)],
+                         [r*math.cos(a)]])
+    t_da = np.array([[r*math.cos(a)*math.cos(b)],
+                     [r*math.sin(b)*math.cos(a)],
+                     [r*(-math.sin(a))]])
+    t_db = np.array([[r*math.sin(a)*(-math.sin(b))],
+                     [r*math.cos(b)*math.sin(a)],
+                     [0.]])
+    t_dr = np.array([[math.sin(a)*math.cos(b)],
+                     [math.sin(b)*math.sin(a)],
+                     [math.cos(a)]])
+    t_Sphere_da = np.dot(R_Sphere_da, -t_Sphere) + np.dot(R_Sphere, -t_da)
+    t_Sphere_db = np.dot(R_Sphere_db, -t_Sphere) + np.dot(R_Sphere, -t_db)
+    t_Sphere_dr = np.dot(R_Sphere_dr, -t_Sphere) + np.dot(R_Sphere, -t_dr)
+    t_Sphere = np.dot(R_Sphere, -t_Sphere)
+    # then I am using them to find the following: dRt/da , dRt/db, dRt/dc where a,b,c were calculated in a previous function
+    dRt_da = np.hstack((R_Sphere_da, t_Sphere_da))
+    dRt_db = np.hstack((R_Sphere_db, t_Sphere_db))
+    dRt_dr = np.hstack((R_Sphere_dr, t_Sphere_dr))
+    Rt_sphere = np.hstack((R_Sphere, t_Sphere))
+    # I am creating the non linear camera equations to find each point (u,v) page 81 in : "Tracking Errors in in Laparoscopic Surgeries"
+    P_da = np.dot(self.K, dRt_da)
+    P_db = np.dot(self.K, dRt_db)
+    P_dr = np.dot(self.K, dRt_dr)
+    P = np.dot(self.K, Rt_sphere)
+    """
+    then for each one of the world points I find the u,v and use them
+    to calculate the Jacobian Matrix.
+    So I need to calculate the followin for
+    each point: du/da, dv/da, du/db,dv/db,du/dc,dv/dc
+    """
+    u1a, u1b, u1c, v1a, v1b, v1c = jacobian_uv(worldpoints[0, :], P, P_da, P_db, P_dr)
+    u2a, u2b, u2c, v2a, v2b, v2c = jacobian_uv(worldpoints[1, :], P, P_da, P_db, P_dr)
+    u3a, u3b, u3c, v3a, v3b, v3c = jacobian_uv(worldpoints[2, :], P, P_da, P_db, P_dr)
+    u4a, u4b, u4c, v4a, v4b, v4c = jacobian_uv(worldpoints[3, :], P, P_da, P_db, P_dr)
+    u5a, u5b, u5c, v5a, v5b, v5c = jacobian_uv(worldpoints[4, :], P, P_da, P_db, P_dr)
+    u6a, u6b, u6c, v6a, v6b, v6c = jacobian_uv(worldpoints[5, :], P, P_da, P_db, P_dr)
+    # 12*3 Jacobian Matrix
+    Jac = np.array([[u1a, u1b, u1c],
+                    [u2a, u2b, u2c],
+                    [u3a, u3b, u3c],
+                    [u4a, u4b, u4c],
+                    [u5a, u5b, u5c],
+                    [u6a, u6b, u6c],
+                    [v1a, v1b, v1c],
+                    [v2a, v2b, v2c],
+                    [v3a, v3b, v3c],
+                    [v4a, v4b, v4c],
+                    [v5a, v5b, v5c],
+                    [v6a, v6b, v6c]])
+    JacT = np.transpose(Jac)
+    return Jac, JacT
+
+
+def get_semi_axes_abc(covariance_matrix, cl):
+    """
+    Get a,b,c of the ellipsoid, they are half the length of the principal axes.
+    """
+    # Confidence level, we consider only n = 3
+    if cl == 0.25:
+        z_square = 1.21253
+    elif cl == 0.5:
+        z_square = 2.36597
+    elif cl == 0.75:
+        z_square = 4.10834
+    elif cl == 0.95:
+        z_square = 7.81473
+    elif cl == 0.97:
+        z_square = 8.94729
+    elif cl == 0.99:
+        z_square = 11.3449
+    else:
+        z_square = 0
+        print "Error: Wrong confidence level!!!"
+    # eigenvalues of covariance matrix
+    theta, vec = np.linalg.eig(covariance_matrix)
+    theta = theta*1000
+    # print theta
+    a = math.sqrt(theta[0] * z_square)
+    b = math.sqrt(theta[1] * z_square)
+    c = math.sqrt(theta[2] * z_square)
+    return a, b, c
+
+
+def drawEllipsoid(a, b, c, xp, yp, zp):
     """
    Create the ellipsoids for the covariance matrices
     """
-    fig = plt.figure(figsize=plt.figaspect(1))  
+    fig = plt.figure(figsize=plt.figaspect(1))
     ax = fig.add_subplot(111, projection='3d')
     ax = plt.gca()
     ax.set_xlim(-1, 1)
     ax.set_ylim(-1, 1)
-  
-
-
-    #possible angles in spherical coordinates
+    # possible angles in spherical coordinates
     u = np.linspace(0, 2 * np.pi, 100)
     v = np.linspace(0, np.pi, 100)
-    
-    #convert to cartesian
+    # convert to cartesian
     x = a * np.outer(np.cos(u), np.sin(v)) + xp
     y = b * np.outer(np.sin(u), np.sin(v)) + yp
     z = c * np.outer(np.ones_like(u), np.cos(v)) + zp
-
-   
-    ax.contour(x, y, z, [xp], zdir='x', offset=xp,cmap=cm.coolwarm)
+    ax.contour(x, y, z, [xp], zdir='x', offset=xp, cmap=cm.coolwarm)
     ax.contour(x, y, z, [yp], zdir='y', offset=yp, cmap=cm.coolwarm)
     ax.contour(x, y, z, [zp], zdir='z', offset=zp, cmap=cm.coolwarm)
-
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-   
     max_radius = max(a, b, c)
     for axis in 'xyz':
         getattr(ax, 'set_{}lim'.format(axis))((-max_radius-0.1, max_radius+0.1))
-
+    plt.legend()
     plt.show()
-    return [[x[1],x[2]],[y[0],y[1]],[z[0],z[1]]]
+
  
 def ellipsoids_changing_a(self,worldpoints,imagepoints,b,r):
     """Draw ellipsoids, while changing only the a angle """
@@ -521,136 +554,143 @@ def calculate_best_a(self,worldpoints,imagepoints,b,r):
     
     return worst,best
    
-def a_angle_deriv(self,worldpoints,imagepoints,b,r):
-        """Calculate best a angle of camera using the derivative of covariance matrices and then plot my results"""
-    
-        for a in np.arange(-90.,95.,5.):
-         covmat=(covariance_matrix_p(self,worldpoints,imagepoints,np.rad2deg(a),b,r))
-         deriv=(np.gradient(abs(covmat)))
-         #deriv=np.gradient(deriv_covariance)
-         print deriv , np.linalg.norm(deriv)
-         with open('dataA.csv', 'ab') as csvfile:  #crete a csv to save and the plot the measurments
-          filewriter = csv.writer(csvfile, delimiter=' ')
-          #filewriter.writerow([float(cond)/condmax , r/100.])
-          filewriter.writerow([float(np.linalg.norm(deriv)) , a])
+   
+def a_angle_deriv(self, worldpoints, imagepoints, b, r):
+        """
+        Calculate best a angle of camera using the derivative of covariance
+        matrices and then plot my results
+        """
+        for a in np.arange(-90., 95., 5.):
+            covmat = (covariance_matrix_p(self, worldpoints, imagepoints, np.rad2deg(a), b, r))
+            deriv = (np.gradient(covmat))
+            # deriv=np.gradient(deriv_covariance)
+            print deriv, np.linalg.norm(deriv)
+            with open('dataA.csv', 'ab') as csvfile:  # create a csv to save and the plot the measurments
+                filewriter = csv.writer(csvfile, delimiter=' ')
+                # filewriter.writerow([float(cond)/condmax , r/100.])
+                filewriter.writerow([float(np.linalg.norm(deriv)), a])
         x = []
         y = []
-        with open('dataA.csv','r') as csvfile:
-          plots = csv.reader(csvfile, delimiter=' ')
-          for column in plots:
-           x.append((float(column[1])))
-           y.append((float(column[0])))
- 
-        plt.plot(x,y, label='Loaded from file!')
+        with open('dataA.csv', 'r') as csvfile:
+            plots = csv.reader(csvfile, delimiter=' ')
+            for column in plots:
+                x.append((float(column[1])))
+                y.append((float(column[0])))
+        plt.plot(x, y, label='Loaded from file!')
         plt.xlabel('a angle(degrees)')
         plt.ylabel('norm of deriv of covariance')
         plt.title('Relationship between a angle & covariance matrix')
         plt.legend()
-        plt.show()        
+        plt.show()  
 
 
-def calculate_best_r(self,worldpoints,imagepoints,b,a):
-    """Find r(radius) that lead to the minimum condition number==the well conditioned matrix. 
-    With r>0  """
-    best=-1.
-    mincond=1000000000.
-    covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,100))
-    #condmax=LA.cond(covmat)
-    #r>0 so I tested many cases after 1 worst
-    for r in np.arange(0.0,3.2,0.2):
-        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,a,b,r))
-        cond=LA.cond(covmat)
-        with open('dataR.csv', 'ab') as csvfile:  #crete a csv to save and the plot the measurments
-          filewriter = csv.writer(csvfile, delimiter=' ')
-          #filewriter.writerow([float(cond)/condmax , r/100.])
-          filewriter.writerow([float(cond) , r])
-      
-        if cond<=mincond:
-            mincond=cond
-            
-            best=r
+def calculate_best_r(self, worldpoints, imagepoints, b, a):
+    """
+    Find r(radius) that lead to the
+    minimum condition number==the
+    well conditioned matrix. With r>0
+    """
+    best = -1.
+    mincond = 1000000000.
+    covmat = (covariance_matrix_p(self, worldpoints, imagepoints, a, b, 100))
+    # r>0 so I tested many cases after 1 worst
+    for r in np.arange(0.0, 3.2, 0.2):
+        covmat = (covariance_matrix_p(self, worldpoints, imagepoints, a, b, r))
+        cond = LA.cond(covmat)
+        with open('dataR.csv', 'ab') as csvfile:  # create a csv to save and the plot the measurments
+            filewriter = csv.writer(csvfile, delimiter=' ')
+            # filewriter.writerow([float(cond)/condmax , r/100.])
+            filewriter.writerow([float(cond), r])
+        if cond <= mincond:
+            mincond = cond
+            best = r
     x = []
     y = []
-    with open('dataR.csv','r') as csvfile:
-         plots = csv.reader(csvfile, delimiter=' ')
-         for column in plots:
-          x.append((float(column[1])))
-          y.append((float(column[0])))
-
-         plt.plot(x,y, label='Loaded from file!')
-         plt.xlabel('r distance(*m)')
-         plt.ylabel('condition number')
-         plt.title('Relationship between distance& Condition number of cov. matrix')
-         plt.legend()
-         plt.show()
-        
+    with open('dataR.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=' ')
+        for column in plots:
+            x.append((float(column[1])))
+            y.append((float(column[0])))
+        plt.plot(x, y, label='Loaded from file!')
+        plt.xlabel('r distance(*m)')
+        plt.ylabel('condition number')
+        plt.title('Relationship between distance&Cond. number of cov.matrix')
+        plt.legend()
+        plt.show()
     return best
 
-#------------------------------------test cases------------------------------------------------------------------------------------------
+# ------------------------------------test cases------------------------------
 
-cam=Camera()
-sph=Sphere()
-cam.set_K(fx = 800.,fy = 800.,cx = 640.,cy = 480.)
-cam.set_width_heigth(1280,960)
-imagePoints=np.full((2,6),0.0)
+
+cam = Camera()
+
+
+sph = Sphere()
+
+
+cam.set_K(fx=800., fy=800., cx=640., cy=480.)
+cam.set_width_heigth(1280, 960)
+imagePoints = np.full((2, 6), 0.0)
 cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
-cam.set_t(0.0,-0.0,0.5, frame='world')
-#worldpoints = spherepoints(6,3)
-#H=DLT3D(cam,worldpoints,imagePoints,True)
-#DLTimage=DLTproject(H,worldpoints)
+cam.set_t(0.0, -0.0, 0.5, frame='world')
+# worldpoints = spherepoints(6,3)
+# H=DLT3D(cam,worldpoints,imagePoints,True)
+# DLTimage=DLTproject(H,worldpoints)
 
-#---------------------------------------Test case using a,b,r spherical coordinates----------------------------------------------------------------------
+# Test case using a,b,r spherical coordinates---------------------------------
+a, b, r = a_b_r_spherical(cam)
+worldpoints = sph.random_points(6, 0.5)
+covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints), imagePoints, a, b, r)
+# rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+a_angle_deriv(cam, np.transpose(worldpoints), imagePoints, b, r)
 
-#a,b,r=a_b_r_spherical(cam)
-#worldpoints = spherepoints(6,3)
-#covmatrix=covariance_matrix_p(cam,np.transpose(worldpoints),imagePoints,a,b,r)
-#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
-#worst,best=calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,rbest)
+# calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
 
-#------------------Find best points, that gives the minimum error to DLT----------------------------------------------------------------
-mincondH=1000000000.
-error=1000000000000.
-noise = np.random.normal(0,1,(2,6))  #add same noise to each random configuration of worldpoints
-
-for p in range(30000): #choose how many random test we will do to find the confi. that leads to the minimum error
-     worldpoints = sph.random_points(6,0.4)
-     imagePoints= cam.project(worldpoints, False)
-     #H=DLT3D(cam,worldpoints,imagePoints,True)
-     #DLTimage=DLTproject(H,worldpoints)
-     
-     imagepoints_noise=stand_add_noise(imagePoints,noise)
-     H=DLT3D(cam,worldpoints, imagepoints_noise, False)
-     
-     cam_center=camera_center(H)  
-     estimated_t=estimate_t(cam,cam_center)
-     err_t=error_t(cam,estimated_t)
-     Rotation=estimate_R_withQR(H)
-     DLTimage=DLTproject(H,worldpoints)
-     err_t=error_t(cam,estimated_t)
-     error_withnoise=reprojection_error(imagePoints,DLTimage,6)
-     
-     if error_withnoise<error:
-         error=error_withnoise
-         bestnoerror=worldpoints
-         bestH=H
-     
-     print p    
-     
-sph.spherepoints=None
-sph.spherepoints=bestnoerror
+# -Find best points, that gives the minimum error to DLT-----------------------
+mincondH = 1000000000.
+error = 100000000000000.
+# add same noise to each random configuration of worldpoints
+noise = np.random.normal(0, 1, (2, 6))
+# choose how many random test we will do to find the confi. that leads to the minimum error
+for p in range(90000):
+    worldpoints = sph.random_points(6, 0.3)
+    imagePoints = cam.project(worldpoints, False)
+    # H = DLT3D(cam, worldpoints, imagePoints, True)
+    # DLTimage=DLTproject(H,worldpoints)
+    imagepoints_noise = stand_add_noise(imagePoints, noise)
+    H = DLT3D(cam, worldpoints, imagepoints_noise, False)
+    DLTimage = DLTproject(H, worldpoints)
+    # condit=LA.cond(H)
+    error_withnoise = reprojection_error(imagePoints, DLTimage, 6)
+    # if condit<error:
+    if error_withnoise < error:
+        error = error_withnoise
+        # error = condit
+        bestnoerror = worldpoints
+        save = imagePoints
+        bestH = H
+    print p
+sph.spherepoints = None
+sph.spherepoints = bestnoerror
 print sph.spherepoints
 cams = [cam]
-spheres = [sph]  
-plot3D(cams, spheres)  
-cam_center=camera_center(bestH)
-estimated_t=estimate_t(cam,cam_center)
-Rotation=estimate_R_withQR(bestH)
-err_R=error_R(cam, Rotation)
-err_t=error_t(cam,estimated_t)
+spheres = [sph]
+plot3D(cams, spheres)
+cam_center = camera_center(bestH)
+estimated_t = estimate_t(cam, cam_center)
+Rotation = estimate_R_withQR(bestH)
+err_R = error_R(cam, Rotation)
+err_t = error_t(cam, estimated_t)
 
-#---------------------------------------Plot the best points configuration----------------------------------------------------------------------
-fig, ax = plt.subplots(subplot_kw={'projection':'3d'})
-    
-ax.scatter(bestnoerror[:3,1],bestnoerror[:3,2],bestnoerror[:3,3],s=70, c='r') 
-ax.scatter(bestnoerror[:3,0],bestnoerror[:3,4],bestnoerror[:3,5],s=70, c='r') 
+# -------------------imagepoints---------------
+x = save[0, :6]
+y = save[1, :6]
+plt.plot(x, y, 'b')
+plt.legend()
+plt.show()
+
+# ---------------------------------------Plot the best points configuration---
+fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+ax.scatter(bestnoerror[:3, 1], bestnoerror[:3, 2], bestnoerror[:3, 3], s=70, c='r')
+ax.scatter(bestnoerror[:3, 0], bestnoerror[:3, 4], bestnoerror[:3, 5], s=70, c='r')
 plt.show()
