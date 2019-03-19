@@ -104,6 +104,20 @@ class Sphere(object):
         fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
         ax.plot_wireframe(self.radius*x, self.radius*y,
                           self.radius*z, color='g')
+        
+     def plot_sphere_and_points(self, pointscoord):
+        phisim = np.linspace((-math.pi)/2., (math.pi/2.))
+        thetasim = np.linspace(0, 2 * np.pi)
+        x = np.outer(np.sin(thetasim), np.cos(phisim))
+        y = np.outer(np.sin(thetasim), np.sin(phisim))
+        z = np.outer(np.cos(thetasim), np.ones_like(phisim))
+        fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+        ax.plot_wireframe(self.radius*x, self.radius*y,
+                          self.radius*z, color='g')
+        ax.scatter(pointscoord[:3, 0], pointscoord[:3, 1], pointscoord[:3, 2], s=80, c='r')
+        ax.scatter(pointscoord[:3, 3], pointscoord[:3, 4], pointscoord[:3, 5], s=80, c='r')
+        plt.show()
+    
 
 # Test ------------------------------------------------------------------------
 
