@@ -30,8 +30,10 @@ class Sphere(object):
         new_sphere.origin = self.origin
         new_sphere.radius = self.radius
         new_sphere.color = self.color
+        new_sphere.sphere_points = self.sphere_points
         new_sphere.angle = self.angle
         new_sphere.R = self.R
+        new_sphere.type = self.type
         return new_sphere
 
     def random_points(self, p=6, r=3, min_dist=0.01):
@@ -134,3 +136,4 @@ S.plot_sphere()
 Sph = Sphere(radius=0.5)
 Sph.set_color((1, 1, 0))
 Sph.random_points(6, 2, 0.001)
+
