@@ -728,7 +728,4 @@ plt.legend()
 plt.show()
 
 # ---------------------------------------Plot the best points configuration---
-fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
-ax.scatter(bestnoerror[:3, 1], bestnoerror[:3, 2], bestnoerror[:3, 3], s=70, c='r')
-ax.scatter(bestnoerror[:3, 0], bestnoerror[:3, 4], bestnoerror[:3, 5], s=70, c='r')
-plt.show()
+sph.plot_sphere_and_points(sph.spherepoints)
