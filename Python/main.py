@@ -618,6 +618,66 @@ def calculate_best_r(self, worldpoints, imagepoints, b, a):
         plt.legend()
         plt.show()
     return best
+   
+   
+def points_config_randomtest(notest=1):
+    # mincondH = 1000000000.
+    error = 100000000000000.
+    # add same noise to each random configuration of worldpoints
+    noise = np.random.normal(0, 1, (2, 6))
+    # choose how many random test we will do to find the confi. that leads to the minimum error
+    for p in range(notests):
+        worldpoints = sph.random_points(6, 0.3)
+        imagePoints = cam.project(worldpoints, False)
+        # H = DLT3D(cam, worldpoints, imagePoints, True)
+        # DLTimage=DLTproject(H,worldpoints)
+        imagepoints_noise = stand_add_noise(imagePoints, noise)
+        H = DLT3D(cam, worldpoints, imagepoints_noise, False)
+        DLTimage = DLTproject(H, worldpoints)
+        # condit=LA.cond(H)
+        error_withnoise = reprojection_error(imagePoints, DLTimage, 6)
+        # if condit<error:
+        if error_withnoise < error:
+            error = error_withnoise
+            # error = condit
+            bestnoerror = worldpoints
+            save = imagePoints
+            bestH = H
+        print p
+    return bestnoerror
+   
+
+def H_DLTwithfor(worldpoints, imagepoints, numberpoints=6):
+    """
+    Extract H matrix from DLT for n number of given worldpoints
+    """
+    H = np.array([]).reshape([0, 12])
+    for i in range(numberpoints):
+        x = worldpoints[0, i]
+        y = worldpoints[1, i]
+        z = worldpoints[2, i]
+        u = imagepoints[0, i]
+        v = imagepoints[1, i]
+        row1 = np.array([x, y, z, 1., 0., 0., 0., 0., -u*x, -u*y, -u*z, -u])
+        row2 = np.array([0., 0., 0., 0., x, y, z, 1., -v*x, -v*y, -u*z, -v])
+        H = np.vstack([H, row1])
+        H = np.vstack([H, row2])
+    return H
+
+
+def matrix_condition_number_autograd(imagepoints, worldpoints, numberpoints=6):
+    """
+    Using the H matrix from DLT to get the greatest and smallest sungular
+    values
+    """
+    H = H_DLTwithfor(worldpoints, imagepoints, numberpoints, True)
+    U, s, V = np.linalg.svd(H, full_matrices=False)
+    print s
+    greatest_singular_value = s[0]
+    smallest_singular_value = s[11]
+    # print greatest_singular_value, smallest_singular_value
+    return greatest_singular_value/smallest_singular_value
+   
 
 # ------------------------------------test cases------------------------------
 
@@ -647,35 +707,13 @@ a_angle_deriv(cam, np.transpose(worldpoints), imagePoints, b, r)
 # calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
 
 # -Find best points, that gives the minimum error to DLT-----------------------
-mincondH = 1000000000.
-error = 100000000000000.
-# add same noise to each random configuration of worldpoints
-noise = np.random.normal(0, 1, (2, 6))
-# choose how many random test we will do to find the confi. that leads to the minimum error
-for p in range(90000):
-    worldpoints = sph.random_points(6, 0.3)
-    imagePoints = cam.project(worldpoints, False)
-    # H = DLT3D(cam, worldpoints, imagePoints, True)
-    # DLTimage=DLTproject(H,worldpoints)
-    imagepoints_noise = stand_add_noise(imagePoints, noise)
-    H = DLT3D(cam, worldpoints, imagepoints_noise, False)
-    DLTimage = DLTproject(H, worldpoints)
-    # condit=LA.cond(H)
-    error_withnoise = reprojection_error(imagePoints, DLTimage, 6)
-    # if condit<error:
-    if error_withnoise < error:
-        error = error_withnoise
-        # error = condit
-        bestnoerror = worldpoints
-        save = imagePoints
-        bestH = H
-    print p
 sph.spherepoints = None
-sph.spherepoints = bestnoerror
+sph.spherepoints = points_config_randomtest(1000)
 print sph.spherepoints
 cams = [cam]
 spheres = [sph]
 plot3D(cams, spheres)
+Hbest=DLT3D(cam, sph.spherepoints, imagePoints,True)
 cam_center = camera_center(bestH)
 estimated_t = estimate_t(cam, cam_center)
 Rotation = estimate_R_withQR(bestH)
