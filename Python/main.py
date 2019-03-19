@@ -626,7 +626,7 @@ def points_config_randomtest(notest=1):
     # add same noise to each random configuration of worldpoints
     noise = np.random.normal(0, 1, (2, 6))
     # choose how many random test we will do to find the confi. that leads to the minimum error
-    for p in range(notests):
+    for p in range(notest):
         worldpoints = sph.random_points(6, 0.3)
         imagePoints = cam.project(worldpoints, False)
         # H = DLT3D(cam, worldpoints, imagePoints, True)
@@ -641,11 +641,9 @@ def points_config_randomtest(notest=1):
             error = error_withnoise
             # error = condit
             bestnoerror = worldpoints
-            save = imagePoints
-            bestH = H
         print p
     return bestnoerror
-   
+
 
 def H_DLTwithfor(worldpoints, imagepoints, numberpoints=6):
     """
