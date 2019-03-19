@@ -9,9 +9,7 @@ Created on Fri Feb 22 21:42:40 2019
 import numpy as np
 import random
 import math
-
 from matplotlib import pyplot as plt
-
 
 class Sphere(object):
     """
@@ -50,14 +48,19 @@ class Sphere(object):
             radius = random.uniform(0, r)
             while(radius == 0):
                 radius = random.uniform(0, r)
-            worldpoints[0, k] = radius*(math.sin(theta)*math.cos(phi))+self.origin[0]
-            worldpoints[1, k] = radius*(math.sin(theta)*math.sin(phi))+self.origin[1]
+            worldpoints[0, k] = (radius*(math.sin(theta)*math.cos(phi))
+                                 + self.origin[0])
+            worldpoints[1, k] = (radius*(math.sin(theta)*math.sin(phi))
+                                 + self.origin[1])
             worldpoints[2, k] = radius*(math.cos(theta))+self.origin[2]
             if(k > 1):
                 for j in range(k-1, 0, -1):
-                    distancex = (worldpoints[0, k]-worldpoints[0, j])*(worldpoints[0, k]-worldpoints[0, j])
-                    distancey = (worldpoints[1, k]-worldpoints[1, j])*(worldpoints[1, k]-worldpoints[1, j])
-                    distancez = (worldpoints[2, k]-worldpoints[2, j])*(worldpoints[2, k]-worldpoints[2, j])
+                    distancex = ((worldpoints[0, k]-worldpoints[0, j])
+                                 * (worldpoints[0, k]-worldpoints[0, j]))
+                    distancey = ((worldpoints[1, k]-worldpoints[1, j])
+                                 * (worldpoints[1, k]-worldpoints[1, j]))
+                    distancez = ((worldpoints[2, k]-worldpoints[2, j])
+                                 * (worldpoints[2, k]-worldpoints[2, j]))
                     distance = math.sqrt(distancex+distancey+distancez)
                 if (distance < min_dist):
                     theta = random.uniform(0., math.pi)
@@ -94,7 +97,7 @@ class Sphere(object):
         ax.scatter(self.sphere_points[:3, 3], self.sphere_points[:3, 4],
                    self.sphere_points[:3, 5], s=70, c='r')
         plt.show()
-   
+
     def plot_sphere(self):
         phisim = np.linspace((-math.pi)/2., (math.pi/2.))
         thetasim = np.linspace(0, 2 * np.pi)
@@ -104,8 +107,8 @@ class Sphere(object):
         fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
         ax.plot_wireframe(self.radius*x, self.radius*y,
                           self.radius*z, color='g')
-        
-     def plot_sphere_and_points(self, pointscoord):
+
+    def plot_sphere_and_points(self, pointscoord):
         phisim = np.linspace((-math.pi)/2., (math.pi/2.))
         thetasim = np.linspace(0, 2 * np.pi)
         x = np.outer(np.sin(thetasim), np.cos(phisim))
@@ -114,10 +117,11 @@ class Sphere(object):
         fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
         ax.plot_wireframe(self.radius*x, self.radius*y,
                           self.radius*z, color='g')
-        ax.scatter(pointscoord[:3, 0], pointscoord[:3, 1], pointscoord[:3, 2], s=80, c='r')
-        ax.scatter(pointscoord[:3, 3], pointscoord[:3, 4], pointscoord[:3, 5], s=80, c='r')
+        ax.scatter(pointscoord[:3, 0], pointscoord[:3, 1],
+                   pointscoord[:3, 2], s=80, c='r')
+        ax.scatter(pointscoord[:3, 3], pointscoord[:3, 4],
+                   pointscoord[:3, 5], s=80, c='r')
         plt.show()
-    
 
 # Test ------------------------------------------------------------------------
 
