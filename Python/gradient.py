@@ -487,3 +487,48 @@ def evaluate_gradient(gradient, objectPoints, P, image_pts_measured):
     gradient.dz6_eval = np.clip(gradient.dz6_eval, -limit, limit)
 
     return gradient
+
+def supersab(n, gradient_eval_current, gradient_eval_old, n_pos, n_neg):
+    if np.sign(gradient_eval_current*gradient_eval_old) > 0:
+        n = n + n_pos
+    else:
+        n = n*n_neg
+    return n
+
+
+def update_points(gradient, objectPoints, limit):
+    op = np.copy(objectPoints)
+    op[0, 0] += - gradient.dx1_eval
+    op[1, 0] += - gradient.dy1_eval
+    op[2, 0] += - gradient.dz1_eval
+
+    op[0, 1] += - gradient.dx2_eval
+    op[1, 1] += - gradient.dy2_eval
+    op[2, 1] += - gradient.dz2_eval
+
+    op[0, 2] += - gradient.dx3_eval
+    op[1, 2] += - gradient.dy3_eval
+    op[2, 2] += - gradient.dz3_eval
+
+    op[0, 3] += - gradient.dx4_eval
+    op[1, 3] += - gradient.dy4_eval
+    op[2, 3] += - gradient.dz4_eval
+
+    op[0, 4] += - gradient.dx5_eval
+    op[1, 4] += - gradient.dy5_eval
+    op[2, 4] += - gradient.dz5_eval
+
+    op[0, 5] += - gradient.dx6_eval
+    op[1, 5] += - gradient.dy6_eval
+    op[2, 5] += - gradient.dz6_eval
+
+    radius = 0.15  # define limits x,y,z
+    for i in range(op.shape[1]):
+        distance = np.sqrt(op[0, i]**2+op[1, i]**2+op[2, i]**2)
+        if distance > radius:
+            op[:4, i] = op[:4, i]*radius/distance
+        else:
+            op[0, :] = np.clip(op[0, :], -limit, limit)
+            op[1, :] = np.clip(op[1, :], -limit, limit)
+            op[2, :] = np.clip(op[2, :], -limit, limit)
+    return op
