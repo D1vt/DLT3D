@@ -316,3 +316,174 @@ def create_gradient(metric='condition_number', n=0.000001):
 
     return [x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5, z5,
             x6, y6, z6]
+
+def evaluate_gradient(gradient, objectPoints, P, image_pts_measured):
+    x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5, z5, x6, y6, z6 = extract_objectpoints_vars(objectPoints)
+
+    gradient.dx1_eval_old = gradient.dx1_eval
+    gradient.dy1_eval_old = gradient.dy1_eval
+    gradient.dz1_eval_old = gradient.dz1_eval
+
+    gradient.dx2_eval_old = gradient.dx2_eval
+    gradient.dy2_eval_old = gradient.dy2_eval
+    gradient.dz2_eval_old = gradient.dz2_eval
+
+    gradient.dx3_eval_old = gradient.dx3_eval
+    gradient.dy3_eval_old = gradient.dy3_eval
+    gradient.dz3_eval_old = gradient.dz3_eval
+
+    gradient.dx4_eval_old = gradient.dx4_eval
+    gradient.dy4_eval_old = gradient.dy4_eval
+    gradient.dz4_eval_old = gradient.dz4_eval
+
+    gradient.dx5_eval_old = gradient.dx5_eval
+    gradient.dy5_eval_old = gradient.dy5_eval
+    gradient.dz5_eval_old = gradient.dz5_eval
+
+    gradient.dx6_eval_old = gradient.dx6_eval
+    gradient.dy6_eval_old = gradient.dy6_eval
+    gradient.dz6_eval_old = gradient.dz6_eval
+
+    gradient.dx1_eval = gradient.dx1(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_x1
+    gradient.dy1_eval = gradient.dy1(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                     x4, y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_y1
+    gradient.dz1_eval = gradient.dz1(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_z1
+
+    gradient.dx2_eval = gradient.dx2(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_x2
+    gradient.dy2_eval = gradient.dy2(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                     x4, y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_y2
+    gradient.dz2_eval = gradient.dz2(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_z2
+
+    gradient.dx3_eval = gradient.dx3(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_x3
+    gradient.dy3_eval = gradient.dy3(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                     x4, y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_y3
+    gradient.dz3_eval = gradient.dz3(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_z3
+
+    gradient.dx4_eval = gradient.dx4(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_x4
+    gradient.dy4_eval = gradient.dy4(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                     x4, y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_y4
+    gradient.dz4_eval = gradient.dz4(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_z4
+
+    gradient.dx5_eval = gradient.dx5(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_x5
+    gradient.dy5_eval = gradient.dy5(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                     x4, y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_y5
+    gradient.dz5_eval = gradient.dz5(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_z5
+
+    gradient.dx6_eval = gradient.dx6(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_x6
+    gradient.dy6_eval = gradient.dy6(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                     x4, y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_y6
+    gradient.dz6_eval = gradient.dz6(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4,
+                                     y4, z4, x5, y5, z5, x6, y6, z6, P,
+                                     image_pts_measured)*gradient.n_z6
+
+    gradient.n_x1 = supersab(gradient.n_x1, gradient.dx1_eval,
+                             gradient.dx1_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_x2 = supersab(gradient.n_x2, gradient.dx2_eval,
+                             gradient.dx2_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_x3 = supersab(gradient.n_x3, gradient.dx3_eval,
+                             gradient.dx3_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_x4 = supersab(gradient.n_x4, gradient.dx4_eval,
+                             gradient.dx4_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_x5 = supersab(gradient.n_x5, gradient.dx5_eval,
+                             gradient.dx5_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_x6 = supersab(gradient.n_x6, gradient.dx6_eval,
+                             gradient.dx6_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+
+    gradient.n_y1 = supersab(gradient.n_y1, gradient.dy1_eval,
+                             gradient.dy1_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_y2 = supersab(gradient.n_y2, gradient.dy2_eval,
+                             gradient.dy2_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_y3 = supersab(gradient.n_y3, gradient.dy3_eval,
+                             gradient.dy3_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_y4 = supersab(gradient.n_y4, gradient.dy4_eval,
+                             gradient.dy4_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_y5 = supersab(gradient.n_y5, gradient.dy5_eval,
+                             gradient.dy5_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_y6 = supersab(gradient.n_y6, gradient.dy6_eval,
+                             gradient.dy6_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+
+    gradient.n_z1 = supersab(gradient.n_z1, gradient.dz1_eval,
+                             gradient.dz1_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_z2 = supersab(gradient.n_z2, gradient.dz2_eval,
+                             gradient.dz2_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_z3 = supersab(gradient.n_z3, gradient.dz3_eval,
+                             gradient.dz3_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_z4 = supersab(gradient.n_z4, gradient.dz4_eval,
+                             gradient.dz4_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_z5 = supersab(gradient.n_z5, gradient.dz5_eval,
+                             gradient.dz5_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    gradient.n_z6 = supersab(gradient.n_z6, gradient.dz6_eval,
+                             gradient.dz6_eval_old, gradient.n_pos,
+                             gradient.n_neg)
+    # # Limit
+    limit = 0.05
+    gradient.dx1_eval = np.clip(gradient.dx1_eval, -limit, limit)
+    gradient.dy1_eval = np.clip(gradient.dy1_eval, -limit, limit)
+    gradient.dz1_eval = np.clip(gradient.dz1_eval, -limit, limit)
+
+    gradient.dx2_eval = np.clip(gradient.dx2_eval, -limit, limit)
+    gradient.dy2_eval = np.clip(gradient.dy2_eval, -limit, limit)
+    gradient.dz2_eval = np.clip(gradient.dz2_eval, -limit, limit)
+
+    gradient.dx3_eval = np.clip(gradient.dx3_eval, -limit, limit)
+    gradient.dy3_eval = np.clip(gradient.dy3_eval, -limit, limit)
+    gradient.dz3_eval = np.clip(gradient.dy3_eval, -limit, limit)
+
+    gradient.dx4_eval = np.clip(gradient.dx4_eval, -limit, limit)
+    gradient.dy4_eval = np.clip(gradient.dy4_eval, -limit, limit)
+    gradient.dz4_eval = np.clip(gradient.dz4_eval, -limit, limit)
+
+    gradient.dx5_eval = np.clip(gradient.dx5_eval, -limit, limit)
+    gradient.dy5_eval = np.clip(gradient.dy5_eval, -limit, limit)
+    gradient.dz5_eval = np.clip(gradient.dz5_eval, -limit, limit)
+
+    gradient.dx6_eval = np.clip(gradient.dx6_eval, -limit, limit)
+    gradient.dy6_eval = np.clip(gradient.dy6_eval, -limit, limit)
+    gradient.dz6_eval = np.clip(gradient.dz6_eval, -limit, limit)
+
+    return gradient
