@@ -676,6 +676,9 @@ def matrix_condition_number_autograd(imagepoints, worldpoints, numberpoints=6):
     # print greatest_singular_value, smallest_singular_value
     return greatest_singular_value/smallest_singular_value
    
+def get_conditioning_number(A):
+    return np.linalg.cond(A)   
+   
 
 # ------------------------------------test cases------------------------------
 
