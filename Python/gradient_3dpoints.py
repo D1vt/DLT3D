@@ -5,6 +5,8 @@ Created on Thu Mar 21 16:20:27 2019
 """
 import autograd.numpy as np
 from autograd import grad
+from vision.camera import Camera
+from python.sphere import Sphere
 
 class Gradient(object):
     def __init__(self):
@@ -522,7 +524,7 @@ def update_points(gradient, objectPoints, limit):
     op[1, 5] += - gradient.dy6_eval
     op[2, 5] += - gradient.dz6_eval
 
-    radius = 0.15  # define limits x,y,z
+    radius = sph.radius  # define limits x,y,z
     for i in range(op.shape[1]):
         distance = np.sqrt(op[0, i]**2+op[1, i]**2+op[2, i]**2)
         if distance > radius:
@@ -532,3 +534,53 @@ def update_points(gradient, objectPoints, limit):
             op[1, :] = np.clip(op[1, :], -limit, limit)
             op[2, :] = np.clip(op[2, :], -limit, limit)
     return op
+
+# -------  DEFINE CAMERA AND SPHERE
+cam = Camera()
+
+
+sph = Sphere()
+
+cam.set_K(fx=800., fy=800., cx=640., cy=480.)
+cam.set_width_heigth(1280, 960)
+cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
+cam.set_t(0.0, -0.0, 0.5, frame='world')
+
+# ----- TEST AND PLOT OPTIMAL-----------------
+gradient = create_gradient(metric='condition_number')
+objectPoints_des = sph.get_sphere_points()
+imagePoints_des = np.array(cam.project(objectPoints_des, False))
+objectPoints_list = list()
+imagePoints_list = list()
+transfer_error_list = list()
+new_objectPoints = objectPoints_des
+for i in range(100):
+    objectPoints = np.copy(new_objectPoints)
+    gradient = evaluate_gradient(gradient, objectPoints,
+                                 np.array(cam.P), imagePoints_des)
+    new_objectPoints = update_points(gradient, objectPoints, sph.radius)
+    new_imagePoints = np.array(cam.project(new_objectPoints, False))
+    objectPoints_list.append(new_objectPoints)
+    imagePoints_list.append(new_imagePoints)
+    plt.figure('Object Points')
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+    plt.ion()
+    if i == 0:
+        plt.cla()
+        plt.plot(objectPoints_des[0], objectPoints_des[1], objectPoints_des[2],
+                 'x', color='black',)
+        plt.axes().set_aspect('equal', 'datalim')
+    phisim = np.linspace((-math.pi)/2., (math.pi/2.))
+    thetasim = np.linspace(0, 2 * np.pi)
+    x = np.outer(np.sin(thetasim), np.cos(phisim))
+    y = np.outer(np.sin(thetasim), np.sin(phisim))
+    z = np.outer(np.cos(thetasim), np.ones_like(phisim))
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+    ax.plot_wireframe(sph.radius*x, sph.radius*y,
+                      sph.radius*z, color='g')
+    plt.plot(new_objectPoints[0], new_objectPoints[1], new_objectPoints[2],
+             '.', color='blue',)
+    plt.pause(0.6)
+
+    x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6 = extract_objectpoints_vars(new_objectPoints)
+    mat_cond_autrograd = matrix_condition_number_autograd(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6,np.array(cam.P),imagePoints_des)
