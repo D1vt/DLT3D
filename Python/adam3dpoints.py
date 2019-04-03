@@ -8,7 +8,10 @@ Created on Thu Apr  4 00:00:30 2019
 
 import autograd.numpy as np
 from autograd import grad
+from vision.camera import Camera
+from python.sphere import Sphere
 from autograd.misc.optimizers import adam
+from optimize.utils import flatten_points, unflatten_points, normalise_points
 
 class OptimalPointsSim(object):
   """ Class that defines and optimization to obtain optimal control points
@@ -37,8 +40,8 @@ class OptimalPointsSim(object):
 
     print("Optimizing condition number...")
     objective_grad = grad(self.objective2)
-    self.optimized_params = adam(objective_grad, self.init_params, step_size=0.01,
-                                num_iters=100, callback = self.plot_points)
+    self.optimized_params = adam(objective_grad, self.init_params, step_size=0.001,
+                                num_iters=200, callback = self.plot_points)
     
   def plot_points(self,params, iter, gradient):
         phisim = np.linspace((-math.pi)/2., (math.pi/2.))
@@ -56,115 +59,14 @@ class OptimalPointsSim(object):
         y = np.outer(np.sin(thetasim), np.sin(phisim))
         z = np.outer(np.cos(thetasim), np.ones_like(phisim))
         fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
-        #ax.plot_wireframe(sph.radius*x, sph.radius*y,
-         #                 sph.radius*z, color='g')
+        ax.plot_wireframe(sph.radius*x, sph.radius*y,
+                          sph.radius*z, color='g')
         ax.scatter(pointscoord[:3, 0], pointscoord[:3, 1],
                    pointscoord[:3, 2], c='r')
         ax.scatter(pointscoord[:3, 3], pointscoord[:3, 4],
                    pointscoord[:3, 5], c='r')
         plt.show()
         
-
-
-def flatten_points(points, type = 'image'):
-  """
-  Points:
-    Array of n points in homogeneous coordinates
-    example image points: np.array([[u1,v1,1], [u2,v2,1] ,....,[un,vn,1] ])
-  Type:
-    image: 2d image points in homogeneous coordinates [u,v,1]
-    object: 3d world points in homogeneous coordinates [x,y,z,1]
-    object_plane: 3d world points on a plane in homogeneous coordinates [x,y,0,1]
-  """
-  if type == 'image':
-    # normalize and remove the homogeneous term
-    n_points = np.copy(points/points[2,:])
-    n_points = n_points[:2,:]
-
-  if type == 'object':
-    # normalize and remove the homogeneous term
-    n_points = np.copy(points/points[3,:])
-    n_points = n_points[:3,:]
-  out = n_points.flatten('F')
-
-  return out
-
-
-def unflatten_points(points, type = 'image'):
-  """
-  Points:
-    Array vector of flatened n points.
-    example image points: np.array([u1,v1, u2,v2,....,un,vn])
-  Type: output format
-    image: 2d image points in homogeneous coordinates [u,v,1]
-    object: 3d world points in homogeneous coordinates [x,y,z,1]
-    object_plane: 3d world points on a plane in homogeneous coordinates [x,y,0,1]
-  """
-  if type == 'image':
-    out = points.reshape((2,-1),order = 'F')
-    out = np.vstack([out, np.ones(out.shape[1])])
-
-  if type == 'object':
-    out = points.reshape((3,-1),order = 'F')
-    out = np.vstack([out, np.ones(out.shape[1])])
-
-  return out
-
-
-def normalise_points(pts):
-    """
-    Function translates and normalises a set of 2D or 3d homogeneous points
-    so that their centroid is at the origin and their mean distance from
-    the origin is sqrt(2).  This process typically improves the
-    conditioning of any equations used to solve homographies, fundamental
-    matrices etc.
-    Inputs:
-    pts: 3xN array of 2D homogeneous coordinates
-    Returns:
-    newpts: 3xN array of transformed 2D homogeneous coordinates.  The
-            scaling parameter is normalised to 1 unless the point is at
-            infinity.
-    T: The 3x3 transformation matrix, newpts = T*pts
-    """
-    if pts.shape[0] == 4:
-        pts = hom_3d_to_2d(pts)
-
-    if pts.shape[0] != 3 and pts.shape[0] != 4  :
-        print "Shape error"
-
-
-    finiteind = np.nonzero(abs(pts[2,:]) > np.spacing(1))
-
-    if len(finiteind[0]) != pts.shape[1]:
-        print('Some points are at infinity')
-
-    dist = []
-    pts = pts/pts[2,:]
-    for i in finiteind:
-        #Replaced below for autograd
-#        pts[0,i] = pts[0,i]/pts[2,i]
-#        pts[1,i] = pts[1,i]/pts[2,i]
-#        pts[2,i] = 1;
-
-        c = np.mean(pts[0:2,i].T, axis=0).T
-
-        newp1 = pts[0,i]-c[0]
-        newp2 = pts[1,i]-c[1]
-
-        dist.append(np.sqrt(newp1**2 + newp2**2))
-
-    dist = np.array(dist)
-
-    meandist = np.mean(dist)
-
-    scale = np.sqrt(2)/meandist
-
-    T = np.array([[scale, 0, -scale*c[0]], [0, scale, -scale*c[1]], [0, 0, 1]])
-
-    newpts = np.dot(T,pts)
-
-
-    return newpts, T
 
 def hom_3d_to_2d(pts):
     pts = pts[[0,1,3],:]
@@ -188,12 +90,8 @@ def calculate_AN_matrix_autograd(params,P,normalize=False):
   else:
    object_pts_norm = object_pts[[0,1,3],:]
    image_pts_norm = image_pts
-
-  #object_pts_norm = object_pts_norm/object_pts_norm[3,:]
-  #image_pts_norm = image_pts_norm/image_pts_norm[2,:]
    
   AN = np.array([]).reshape([0,12])
-  #A = np.array([])
   for i in range(n_points):
       x = object_pts_norm[0,i]
       y = object_pts_norm[1,i]
@@ -213,11 +111,6 @@ def matrix_condition_number_autograd(params,P,normalize = False):
   AN = calculate_AN_matrix_autograd(params,P, normalize)
   U, s, V = np.linalg.svd(AN,full_matrices=False)
   greatest_singular_value = s[0]
-#  rcond=1e-5
-#  if s[-1] > rcond:
-#    smalles_singular_value = s[-1]
-#  else:
-#    smalles_singular_value = s[-2]
   smallest_singular_value = s[11]
   return greatest_singular_value/smallest_singular_value
 
