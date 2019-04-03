@@ -563,7 +563,6 @@ for i in range(100):
     objectPoints_list.append(new_objectPoints)
     imagePoints_list.append(new_imagePoints)
     plt.figure('Object Points')
-    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
     plt.ion()
     if i == 0:
         plt.cla()
