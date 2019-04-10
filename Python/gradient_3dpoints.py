@@ -7,6 +7,14 @@ import autograd.numpy as np
 from autograd import grad
 from vision.camera import Camera
 from python.sphere import Sphere
+import python.dlt_and_errors as dLt
+import csv
+with open('error_r.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')
+with open('error_t.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')
+with open('error_reproject.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')    
 
 class Gradient(object):
     def __init__(self):
@@ -535,6 +543,75 @@ def update_points(gradient, objectPoints, limit):
             op[2, :] = np.clip(op[2, :], -limit, limit)
     return op
 
+def plot_error_r():
+    x = []
+    y = []
+    with open('error_r.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=' ')
+        for column in plots:
+            x.append((float(column[1])))
+            y.append((float(column[0])))
+        plt.plot(x, y, label='Loaded from file!')
+        plt.xlabel('number of iterations')
+        plt.ylabel('Rotation Error (degrees))')
+        plt.title('Rotation Error while changing the points')
+        plt.legend()
+        plt.show()
+
+def mean_noise_points(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5,
+                      z5, x6, y6, z6):
+    errorpoints = np.full((3, 6), 0.0)
+    real_points = np.array([[x1, x2, x3, x4, x5, x6],
+                            [y1, y2, y3, y4, y5, y6],
+                            [z1, z2, z3, z4, z5, z6],
+                            [1., 1., 1., 1., 1., 1.]])
+    imagepoints = cam.project(real_points)
+    for i in range(1000):
+        errorpoints = errorpoints + add_noise(imagepoints, sd=2., mean=0.,
+                                              size=0)
+    errorpoints = errorpoints/1000.
+    H = dLt.DLT3D(cam, real_points, errorpoints, normalization=False)
+    forreproject = dLt.DLTproject(H, real_points, quant_error=False)
+    reproject = dLt.reprojection_error(imagepoints, forreproject, 6)
+    estim_R = dLt.estimate_R_withQR(H)
+    estim_center = dLt.camera_center(H)
+    estim_t = dLt.estimate_t(cam, estim_center)
+    t_error = dLt.error_t(cam, estim_t)
+    r_angle = dLt.Raul_error_R(cam, estim_R)
+    return t_error, reproject, r_angle
+
+
+def plot_error_t():
+    x = []
+    y = []
+    with open('error_t.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=' ')
+        for column in plots:
+            x.append((float(column[1])))
+            y.append((float(column[0])))
+        plt.plot(x, y, label='Loaded from file!')
+        plt.xlabel('number of iterations')
+        plt.ylabel('Translation Error (100%)')
+        plt.title('Translation Error while changing the points')
+        plt.legend()
+        plt.show()
+
+
+def plot_reprojection_error():
+    x = []
+    y = []
+    with open('error_reproject.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=' ')
+        for column in plots:
+            x.append((float(column[1])))
+            y.append((float(column[0])))
+        plt.plot(x, y, label='Loaded from file!')
+        plt.xlabel('number of iterations')
+        plt.ylabel('Reprojection Error')
+        plt.title('Reprojection Error while changing the points')
+        plt.legend()
+        plt.show()
+
 # -------  DEFINE CAMERA AND SPHERE
 cam = Camera()
 
@@ -582,4 +659,28 @@ for i in range(100):
     plt.pause(0.6)
 
     x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6 = extract_objectpoints_vars(new_objectPoints)
+    
+     t_error, reproject, r_error = mean_noise_points(x1, y1, z1, x2, y2, z2, x3,
+                                                    y3, z3, x4, y4, z4, x5, y5,
+                                                    z5, x6, y6, z6)
+    with open('error_t.csv', 'ab') as csvfile:
+            filewriter = csv.writer(csvfile, delimiter=' ')
+            filewriter.writerow([float(t_error), number])
+    with open('error_r.csv', 'ab') as csvfile:
+            filewriter = csv.writer(csvfile, delimiter=' ')
+            filewriter.writerow([float(reproject), number])
+    with open('error_reproject.csv', 'ab') as csvfile:
+            filewriter = csv.writer(csvfile, delimiter=' ')
+            filewriter.writerow([float(r_error), number])
+    mat_cond_autrograd = matrix_condition_number_autograd(x1, y1, z1, x2, y2,
+                                                          z2, x3, y3, z3, x4,
+                                                          y4, z4, x5, y5, z5,
+                                                          x6, y6, z6,
+                                                          np.array(cam.P),
+                                                          imagePoints_des)
+    number = number + 1
     mat_cond_autrograd = matrix_condition_number_autograd(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6,np.array(cam.P),imagePoints_des)
+
+plot_error_t()
+plot_error_r()
+plot_reprojection_error()
