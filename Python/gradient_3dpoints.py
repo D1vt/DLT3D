@@ -660,7 +660,7 @@ for i in range(100):
 
     x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6 = extract_objectpoints_vars(new_objectPoints)
     
-     t_error, reproject, r_error = mean_noise_points(x1, y1, z1, x2, y2, z2, x3,
+    t_error, reproject, r_error = mean_noise_points(x1, y1, z1, x2, y2, z2, x3,
                                                     y3, z3, x4, y4, z4, x5, y5,
                                                     z5, x6, y6, z6)
     with open('error_t.csv', 'ab') as csvfile:
