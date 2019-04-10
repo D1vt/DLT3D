@@ -139,7 +139,15 @@ def error_R(self, estimated_R):
     ang = math.acos(((error_r[0, 0]+error_r[1, 1]+error_r[2, 2])-1.)/2.)
     print ang * 180/math.pi
     return error_r
-
+   
+def Raul_error_R(self, estimated_R):
+    """
+    Find R error, caused from DLT, as shown in Raul's paper
+    """
+    error_Raul_R = np.dot(estimated_R.T, self.R)
+    angle = math.acos(((error_Raul_R[0, 0] + error_Raul_R[1, 1] +
+                      error_Raul_R[2, 2])-1.)/2.)
+    return angle
 
 def error_t(self, estimated_t):
     """
@@ -152,6 +160,7 @@ def error_t(self, estimated_t):
     normt = math.sqrt((self.t[0, 3]*self.t[0, 3])+(self.t[1, 3]*self.t[1, 3])
                       + (self.t[2, 3]*self.t[2, 3]))
     total_error = math.sqrt(ertx+erty+ertz)/normt
+    total_error = total_error * 100.
     return total_error
     
     
