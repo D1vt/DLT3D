@@ -14,7 +14,9 @@ with open('error_r.csv', 'w') as csvfile:
 with open('error_t.csv', 'w') as csvfile:
     filewriter = csv.writer(csvfile, delimiter=' ')
 with open('error_reproject.csv', 'w') as csvfile:
-    filewriter = csv.writer(csvfile, delimiter=' ')    
+    filewriter = csv.writer(csvfile, delimiter=' ') 
+with open('condition.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')
 
 class Gradient(object):
     def __init__(self):
@@ -612,6 +614,23 @@ def plot_reprojection_error():
         plt.legend()
         plt.show()
 
+
+def plot_condition():
+    x = []
+    y = []
+    with open('condition.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=' ')
+        for column in plots:
+            x.append((float(column[1])))
+            y.append((float(column[0])))
+        plt.plot(x, y, c='r', label='Loaded from file!')
+        plt.xlabel('number of iterations')
+        plt.ylabel('Condition Number')
+        plt.title('Condition Number while changing the set of points')
+        plt.legend()
+        plt.show()
+        
+
 # -------  DEFINE CAMERA AND SPHERE
 cam = Camera()
 
@@ -678,9 +697,12 @@ for i in range(100):
                                                           x6, y6, z6,
                                                           np.array(cam.P),
                                                           imagePoints_des)
+    with open('condition.csv', 'ab') as csvfile:
+            filewriter = csv.writer(csvfile, delimiter=' ')
+            filewriter.writerow([float(mat_cond_autrograd), number])
     number = number + 1
-    mat_cond_autrograd = matrix_condition_number_autograd(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6,np.array(cam.P),imagePoints_des)
-
+  
 plot_error_t()
 plot_error_r()
 plot_reprojection_error()
+plot_condition()
