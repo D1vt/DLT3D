@@ -135,20 +135,12 @@ def error_R(self, estimated_R):
     Find R error, caused from DLT.Source:
     https://inside.mines.edu/~whoff/courses/EENG512/lectures/18-LinearPoseEstimation.pdf
     """
-    error_r = np.dot(inv(self.R[:3, :3]), estimated_R[:3, :3])
+    error_r = np.dot(estimated_R[:3, :3], inv(self.R[:3, :3]))
     ang = math.acos(((error_r[0, 0]+error_r[1, 1]+error_r[2, 2])-1.)/2.)
-    print ang * 180/math.pi
-    return error_r
-   
-def Raul_error_R(self, estimated_R):
-    """
-    Find R error, caused from DLT, as shown in Raul's paper
-    """
-    error_Raul_R = np.dot(estimated_R.T, self.R)
-    angle = math.acos(((error_Raul_R[0, 0] + error_Raul_R[1, 1] +
-                      error_Raul_R[2, 2])-1.)/2.)
-    return angle
+    # print ang * 180/math.pi
+    return np.rad2deg(ang)
 
+   
 def error_t(self, estimated_t):
     """
     Find t error, caused from DLT.Source:
@@ -176,7 +168,7 @@ cam.set_width_heigth(1280, 960)
 imagePoints = np.full((2, 6), 0.0)
 cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 cam.set_t(0.0, -0.0, 0.5, frame='world')
-worldpoints = sph.random_points(6, 0.5)
+worldpoints = sph.random_points(6, 0.3)
 imagePoints = cam.project(worldpoints, False)    
 
 H = DLT3D(cam,worldpoints, imagePoints, True)
