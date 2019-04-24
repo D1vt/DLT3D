@@ -21,7 +21,7 @@ def DLT3D(self, worldpoints, imagepoints, normalization=False):
     This function calculates the final H matrix, using DLT
     algorithm for 3D points
     """
-    # if odd row 0,0,0,0,xi,yi,zi,1,-vixi,-viyi,-vizi,-vi
+    # if odd row :0,0,0,0,xi,yi,zi,1,-vixi,-viyi,-vizi,-vi
     # if even row : Χι,Υι,Ζι,1,0,0,0,0,-uixi,-uiyi,-uizi,-ui
     if not normalization:
         imagepoints = normalize(imagepoints)
