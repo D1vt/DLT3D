@@ -568,10 +568,10 @@ def mean_noise_points(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5,
                             [z1, z2, z3, z4, z5, z6],
                             [1., 1., 1., 1., 1., 1.]])
     imagepoints = cam.project(real_points)
-    for i in range(1000):
-        errorpoints = errorpoints + add_noise(imagepoints, sd=2., mean=0.,
+    for i in range(2000):
+        errorpoints = errorpoints + add_noise(imagepoints, sd=8., mean=2.,
                                               size=0)
-    errorpoints = errorpoints/1000.
+    errorpoints = errorpoints/2000.
     H = dLt.DLT3D(cam, real_points, errorpoints, normalization=False)
     forreproject = dLt.DLTproject(H, real_points, quant_error=False)
     reproject = dLt.reprojection_error(imagepoints, forreproject, 6)
@@ -579,8 +579,25 @@ def mean_noise_points(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5,
     estim_center = dLt.camera_center(H)
     estim_t = dLt.estimate_t(cam, estim_center)
     t_error = dLt.error_t(cam, estim_t)
-    r_angle = dLt.Raul_error_R(cam, estim_R)
+    r_angle = dLt.error_R(cam, estim_R)
     return t_error, reproject, r_angle
+
+
+def plot_error_r():
+    x = []
+    y = []
+    with open('error_r.csv', 'r') as csvfile:
+        plots = csv.reader(csvfile, delimiter=' ')
+        for column in plots:
+            x.append((float(column[1])))
+            y.append((float(column[0])))
+        plt.figure(19)
+        plt.plot(x, y, c='y', label='random noise mean=2, sd=8, points r<0.5')
+        plt.xlabel('number of iterations')
+        plt.ylabel('Rotation Error (degrees)')
+        plt.title('Rotation Error while changing the points')
+        plt.legend()
+        plt.show()
 
 
 def plot_error_t():
@@ -591,10 +608,11 @@ def plot_error_t():
         for column in plots:
             x.append((float(column[1])))
             y.append((float(column[0])))
-        plt.plot(x, y, label='Loaded from file!')
+        plt.figure(21)
+        plt.plot(x, y, label='random noise mean=2, sd=8, points r<0.5')
         plt.xlabel('number of iterations')
         plt.ylabel('Translation Error (100%)')
-        plt.title('Translation Error while changing the points')
+        plt.title('Translation Error while changing the set of points')
         plt.legend()
         plt.show()
 
@@ -607,10 +625,11 @@ def plot_reprojection_error():
         for column in plots:
             x.append((float(column[1])))
             y.append((float(column[0])))
-        plt.plot(x, y, label='Loaded from file!')
+        plt.figure(20)
+        plt.plot(x, y, c='g', label='random noise mean=2 , sd=8, points r<0.5')
         plt.xlabel('number of iterations')
         plt.ylabel('Reprojection Error')
-        plt.title('Reprojection Error while changing the points')
+        plt.title('Reprojection Error while changing the set of points')
         plt.legend()
         plt.show()
 
@@ -623,13 +642,13 @@ def plot_condition():
         for column in plots:
             x.append((float(column[1])))
             y.append((float(column[0])))
-        plt.plot(x, y, c='r', label='Loaded from file!')
+        plt.figure(22)
+        plt.plot(x, y, c='r', label='random noise mean=2, sd=8, points r<0.5')
         plt.xlabel('number of iterations')
         plt.ylabel('Condition Number')
         plt.title('Condition Number while changing the set of points')
         plt.legend()
-        plt.show()
-        
+        plt.show()        
 
 # -------  DEFINE CAMERA AND SPHERE
 cam = Camera()
@@ -658,24 +677,24 @@ for i in range(100):
     new_imagePoints = np.array(cam.project(new_objectPoints, False))
     objectPoints_list.append(new_objectPoints)
     imagePoints_list.append(new_imagePoints)
-    plt.figure('Object Points')
-    plt.ion()
-    if i == 0:
-        plt.cla()
-        plt.plot(objectPoints_des[0], objectPoints_des[1], objectPoints_des[2],
-                 'x', color='black',)
-        plt.axes().set_aspect('equal', 'datalim')
-    phisim = np.linspace((-math.pi)/2., (math.pi/2.))
-    thetasim = np.linspace(0, 2 * np.pi)
-    x = np.outer(np.sin(thetasim), np.cos(phisim))
-    y = np.outer(np.sin(thetasim), np.sin(phisim))
-    z = np.outer(np.cos(thetasim), np.ones_like(phisim))
-    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
-    ax.plot_wireframe(sph.radius*x, sph.radius*y,
-                      sph.radius*z, color='g')
-    plt.plot(new_objectPoints[0], new_objectPoints[1], new_objectPoints[2],
-             '.', color='blue',)
-    plt.pause(0.6)
+    if (i == 1 or i == 50 or i == 99):
+        # plt.figure('Object Points')    
+        phisim = np.linspace((-math.pi)/2., (math.pi/2.))
+        thetasim = np.linspace(0, 2 * np.pi)
+        x = np.outer(np.sin(thetasim), np.cos(phisim))
+        y = np.outer(np.sin(thetasim), np.sin(phisim))
+        z = np.outer(np.cos(thetasim), np.ones_like(phisim))
+        fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+        ax.plot_wireframe(sph.radius*x, sph.radius*y,
+                          sph.radius*z, color='g')
+        plt.plot(new_objectPoints[0], new_objectPoints[1], new_objectPoints[2],
+                 '.', color='blue',)
+        plt.pause(0.6)
+        fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+        plt.plot(new_objectPoints[0], new_objectPoints[1], new_objectPoints[2],
+                 '.', color='red',)
+        plt.pause(0.6)
+
 
     x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,x5,y5,z5,x6,y6,z6 = extract_objectpoints_vars(new_objectPoints)
     
