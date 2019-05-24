@@ -706,10 +706,10 @@ for i in range(100):
             filewriter.writerow([float(t_error), number])
     with open('error_r.csv', 'ab') as csvfile:
             filewriter = csv.writer(csvfile, delimiter=' ')
-            filewriter.writerow([float(reproject), number])
+            filewriter.writerow([float(r_error), number])
     with open('error_reproject.csv', 'ab') as csvfile:
             filewriter = csv.writer(csvfile, delimiter=' ')
-            filewriter.writerow([float(r_error), number])
+            filewriter.writerow([float(reproject), number])
     mat_cond_autrograd = matrix_condition_number_autograd(x1, y1, z1, x2, y2,
                                                           z2, x3, y3, z3, x4,
                                                           y4, z4, x5, y5, z5,
