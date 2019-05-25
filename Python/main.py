@@ -534,6 +534,28 @@ def matrix_condition_number_autograd(imagepoints, worldpoints, numberpoints=6):
    
 def get_conditioning_number(A):
     return np.linalg.cond(A)   
+ 
+def bestangledist(self):
+    a, b, r = a_b_r_spherical(self)
+    a = (math.pi)/2
+    r = 0.8
+    R_Eu = R_from_euler()
+    R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b),
+                          math.cos(b)*math.sin(a)],
+                         [math.sin(b)*math.cos(a), math.cos(b),
+                          math.sin(b)*math.sin(a)],
+                         [math.sin(a), 0., math.cos(a)]])
+    R_Eu = R_from_euler()
+    # find the final R, t
+    R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
+    t_Sphere = np.array([[r*math.sin(a)*math.cos(b)],
+                         [r*math.sin(b)*math.sin(a)],
+                         [r*math.cos(a)]])
+    t_Sphere = np.dot(R_Sphere, -t_Sphere)
+    # then I am using them to find the following: dRt/da , dRt/db, dRt/dc
+    Rt_sphere = np.hstack((R_Sphere, t_Sphere))
+    P_sphere = np.dot(self.K, Rt_sphere)
+    self.P = P_sphere 
    
 
 # ------------------------------------test cases------------------------------
