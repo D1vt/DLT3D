@@ -16,7 +16,7 @@ class Sphere(object):
     Class for representing a 3D grid sphere based on radius r,
     and angles phi,theta.
     """
-    def __init__(self, radius=1., origin=np.array([0., 0., 0.])):
+    def __init__(self, radius=0.5, origin=np.array([0., 0., 0.])):
         self.origin = origin
         self.radius = radius
         self.color = (1, 0, 0)
