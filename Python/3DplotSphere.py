@@ -108,14 +108,14 @@ cam = Camera()
 cam.set_K(fx=100, fy=100, cx=640, cy=480)
 cam.set_width_heigth(1280, 960)
 
-""" Initial camera pose looking stratight down into the plane model """
+""" Initial camera pose looking straight down into the plane model """
 cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180))
 cam.set_t(0.0, 0.0, 1.5, frame='world')
 
 """ Plane for the control points """
 sph = Sphere(2)
 sph.set_color((1, 1, 0))
-sph.random_points(5000, 1, 0.0001)
+sph.random_points(3000, 0.3, 0.0001)
 
 """ Plot camera axis and plane """
 cams = [cam]
