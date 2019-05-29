@@ -579,16 +579,16 @@ def mean_noise_points(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5,
         errorpoints = errorpoints + add_noise(imagepoints, sd=8., mean=2.,
                                               size=0)
     errorpoints = errorpoints/1000.
-    H = DLT3D(cam, real_points, errorpoints, normalization=False)
+    H = dlt.DLT3D(cam, real_points, errorpoints, normalization=False)
     covar = np.cov(H)
     conditioncov = LA.cond(covar)
-    forreproject = DLTproject(H, real_points, quant_error=False)
-    reproject = reprojection_error(imagepoints, forreproject, 6)
-    estim_R = estimate_R_withQR(H)
-    estim_center = camera_center(H)
-    estim_t = estimate_t(cam, estim_center)
-    t_error = error_t(cam, estim_t)
-    r_angle = error_R(cam, estim_R)
+    forreproject = dlt.DLTproject(H, real_points, quant_error=False)
+    reproject = dlt.reprojection_error(imagepoints, forreproject, 6)
+    estim_R = dlt.estimate_R_withQR(H)
+    estim_center = dlt.camera_center(H)
+    estim_t = dlt.estimate_t(cam, estim_center)
+    t_error = dlt.error_t(cam, estim_t)
+    r_angle = dlt.error_R(cam, estim_R)
     return t_error, reproject, r_angle, conditioncov   
 
 # ------------------------------------test cases------------------------------
