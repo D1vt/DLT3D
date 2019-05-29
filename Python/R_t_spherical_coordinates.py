@@ -1,5 +1,20 @@
 import math
 from vision.camera import Camera
+import numpy as np
+import scipy.linalg
+from python.sphere import Sphere
+from numpy import linalg as LA
+from scipy.linalg import expm, inv
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits.mplot3d import axes3d
+import csv
+with open('dataA.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')
+with open('dataR.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')
+with open('dataerror.csv', 'w') as csvfile:
+    filewriter = csv.writer(csvfile, delimiter=' ')
 
 
 def a_b_r_spherical(self):
@@ -285,3 +300,20 @@ def calculate_best_r(self, worldpoints, imagepoints, b, a):
         plt.legend()
         plt.show()
     return best
+
+# ------------------------------------test cases------------------------------
+#sph = Sphere()
+
+#cam = Camera()
+#cam.set_K(fx=800., fy=800., cx=640., cy=480.)
+#cam.set_width_heigth(1280, 960)
+#imagePoints = np.full((2, 6), 0.0)
+#cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
+#cam.set_t(0.0, -0.0, 0.5, frame='world')
+# Test case using a,b,r spherical coordinates---------------------------------
+#worldpoints = sph.random_points(6,0.3)
+#a, b, r = a_b_r_spherical(cam)
+#covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints), imagePoints, a, b, r)
+#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+#a_angle_deriv(cam, np.transpose(worldpoints), imagePoints, b, r)
+# calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
