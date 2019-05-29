@@ -3,9 +3,17 @@ Created on Thu Apr  5 15:41:33 2019
  /
 @author: diana
 """
-
+import numpy as np
+import scipy.linalg
+import random
 from vision.camera import Camera
 from python.sphere import Sphere
+from numpy import linalg as LA
+from scipy.linalg import expm, inv
+import math
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits.mplot3d import axes3d
 
 def normalize(points, size=2):
     """
