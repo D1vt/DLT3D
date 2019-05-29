@@ -337,6 +337,104 @@ def calculate_best_r(self, worldpoints, imagepoints, b, a):
         plt.show()
     return best
 
+
+def get_semi_axes_abc(covariance_matrix, cl):
+    """
+    Get a,b,c of the ellipsoid, they are half the length of the principal axes.
+    """
+    # Confidence level, we consider only n = 3
+    if cl == 0.25:
+        z_square = 1.21253
+    elif cl == 0.5:
+        z_square = 2.36597
+    elif cl == 0.75:
+        z_square = 4.10834
+    elif cl == 0.95:
+        z_square = 7.81473
+    elif cl == 0.97:
+        z_square = 8.94729
+    elif cl == 0.99:
+        z_square = 11.3449
+    else:
+        z_square = 0
+        print "Error: Wrong confidence level!!!"
+    # eigenvalues of covariance matrix
+    theta, vec = np.linalg.eig(covariance_matrix)
+    theta = theta*1000
+    # print theta
+    a = math.sqrt(theta[0] * z_square)
+    b = math.sqrt(theta[1] * z_square)
+    c = math.sqrt(theta[2] * z_square)
+    return a, b, c
+
+
+def drawEllipsoid(a, b, c, xp, yp, zp):
+    """
+   Create the ellipsoids for the covariance matrices
+    """
+    fig = plt.figure(figsize=plt.figaspect(1))
+    ax = fig.add_subplot(111, projection='3d')
+    ax = plt.gca()
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
+    # possible angles in spherical coordinates
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, np.pi, 100)
+    # convert to cartesian
+    x = a * np.outer(np.cos(u), np.sin(v)) + xp
+    y = b * np.outer(np.sin(u), np.sin(v)) + yp
+    z = c * np.outer(np.ones_like(u), np.cos(v)) + zp
+    ax.contour(x, y, z, [xp], zdir='x', offset=xp, cmap=cm.coolwarm)
+    ax.contour(x, y, z, [yp], zdir='y', offset=yp, cmap=cm.coolwarm)
+    ax.contour(x, y, z, [zp], zdir='z', offset=zp, cmap=cm.coolwarm)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    max_radius = max(a, b, c)
+    for axis in 'xyz':
+        getattr(ax, 'set_{}lim'.format(axis))((-max_radius-0.1, max_radius+0.1))
+    plt.legend()
+    plt.show()
+
+ 
+def ellipsoids_changing_a(self,worldpoints,imagepoints,b,r):
+    """Draw ellipsoids, while changing only the a angle """
+  
+    
+    for d in np.arange(-1., 1.2,0.2):
+        a=-90.
+        covmat=(covariance_matrix_p(self,worldpoints,imagepoints,np.rad2deg(a),b,r))
+        an,bn,cn=get_semi_axes_abc(covmat,0.75)
+        drawEllipsoid(an,bn,cn,d,math.sqrt(1-d*d),0)
+        a=a+18.
+
+def bestangledist(self):
+    """
+    Change the pose of the camera by changing the spherical coordinates of R,t
+    """
+    a, b, r = a_b_r_spherical(self)
+    a = (math.pi)/2
+    r = 0.8
+    R_Eu = R_from_euler()
+    R_Sphere = np.array([[math.cos(b)*math.cos(a), -math.sin(b),
+                          math.cos(b)*math.sin(a)],
+                         [math.sin(b)*math.cos(a), math.cos(b),
+                          math.sin(b)*math.sin(a)],
+                         [math.sin(a), 0., math.cos(a)]])
+    R_Eu = R_from_euler()
+    # find the final R, t
+    R_Sphere = np.dot(R_Sphere, R_Eu[:3, :3])
+    t_Sphere = np.array([[r*math.sin(a)*math.cos(b)],
+                         [r*math.sin(b)*math.sin(a)],
+                         [r*math.cos(a)]])
+    t_Sphere = np.dot(R_Sphere, -t_Sphere)
+    # then I am using them to find the following: dRt/da , dRt/db, dRt/dc
+    Rt_sphere = np.hstack((R_Sphere, t_Sphere))
+    P_sphere = np.dot(self.K, Rt_sphere)
+    self.P = P_sphere 
+   
+
+
 # ------------------------------------test cases------------------------------
 #sph = Sphere()
 
