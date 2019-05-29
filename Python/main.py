@@ -98,24 +98,12 @@ def add_noise(imagepoints, sd=4., mean=0., size=10000):
         return imageNoise     
 
 
-def stand_add_noise(imagepoints, noise, points=6):
+def stand_add_noise(imagepoints, points=6):
     imagenoise = np.full((3, points), 1.0)
-    imagenoise[0, 0] = imagepoints[0, 0] + noise[0, 0]
-    imagenoise[1, 0] = imagepoints[1, 0] + noise[1, 0]
-    imagenoise[0, 1] = imagepoints[0, 1] + noise[0, 1]
-    imagenoise[1, 1] = imagepoints[1, 1] + noise[1, 1]
-    imagenoise[0, 2] = imagepoints[0, 2] + noise[0, 2]
-    imagenoise[1, 2] = imagepoints[1, 2] + noise[1, 2]
-    imagenoise[0, 3] = imagepoints[0, 3] + noise[0, 3]
-    imagenoise[1, 3] = imagepoints[1, 3] + noise[1, 3]
-    imagenoise[0, 4] = imagepoints[0, 4] + noise[0, 4]
-    imagenoise[1, 4] = imagepoints[1, 4] + noise[1, 4]
-    imagenoise[0, 5] = imagepoints[0, 5] + noise[0, 5]
-    imagenoise[1, 5] = imagepoints[1, 5] + noise[1, 5]
-    # imagenoise[0,6]=imagepoints[0,6] +noise[0,6]
-    # imagenoise[1,6]=imagepoints[1,6] +noise[1,6]
-    # imagenoise[0,7]=imagepoints[0,7] +noise[0,7]
-    # imagenoise[1,7]=imagepoints[1,7] +noise[1,7]
+    for i in range(2000):
+        imagenoise = imagenoise + add_noise(imagepoints, sd=8., mean=2.,
+                                            size=0)
+    imagenoise = imagenoise/2000.
     return imagenoise
    
 
@@ -481,13 +469,24 @@ def points_config_randomtest(notest=1):
     error = 100000000000000.
     # add same noise to each random configuration of worldpoints
     noise = np.random.normal(0, 1, (2, 6))
-    # choose how many random test we will do to find the confi. that leads to the minimum error
+    # choose how many random test we will do
     for p in range(notest):
         worldpoints = sph.random_points(6, 0.3)
+        if p==0:
+            fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+            ax.scatter(worldpoints[:3, 0], worldpoints[:3, 1],
+                       worldpoints[:3, 2], s=50, c='r')
+            ax.scatter(worldpoints[:3, 3], worldpoints[:3, 4],
+                       worldpoints[:3, 5], s=50, c='r')
+            ax.set_xlabel('x label')
+            ax.set_ylabel('y label')
+            ax.set_zlabel('z label')
+            plt.show()
+            sph.plot_sphere_and_points(worldpoints)
         imagePoints = cam.project(worldpoints, False)
         # H = DLT3D(cam, worldpoints, imagePoints, True)
         # DLTimage=DLTproject(H,worldpoints)
-        imagepoints_noise = stand_add_noise(imagePoints, noise)
+        imagepoints_noise = stand_add_noise(imagePoints)
         H = DLT3D(cam, worldpoints, imagepoints_noise, False)
         DLTimage = DLTproject(H, worldpoints)
         # condit=LA.cond(H)
@@ -497,7 +496,18 @@ def points_config_randomtest(notest=1):
             error = error_withnoise
             # error = condit
             bestnoerror = worldpoints
-        print p
+            
+    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+    ax.scatter(bestnoerror[:3, 0], bestnoerror[:3, 1],
+                       bestnoerror[:3, 2], s=50, c='g')
+    ax.scatter(bestnoerror[:3, 3], bestnoerror[:3, 4],
+                       bestnoerror[:3, 5], s=50, c='g')
+    ax.set_xlabel('x label')
+    ax.set_ylabel('y label')
+    ax.set_zlabel('z label')
+    plt.show()
+    sph.plot_sphere_and_points(bestnoerror)
+        # print p     
     return bestnoerror
 
 
@@ -557,6 +567,29 @@ def bestangledist(self):
     P_sphere = np.dot(self.K, Rt_sphere)
     self.P = P_sphere 
    
+def mean_noise_points(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x5, y5,
+                      z5, x6, y6, z6):
+    errorpoints = np.full((3, 6), 0.0)
+    real_points = np.array([[x1, x2, x3, x4, x5, x6],
+                            [y1, y2, y3, y4, y5, y6],
+                            [z1, z2, z3, z4, z5, z6],
+                            [1., 1., 1., 1., 1., 1.]])
+    imagepoints = cam.project(real_points)
+    for i in range(1000):
+        errorpoints = errorpoints + add_noise(imagepoints, sd=8., mean=2.,
+                                              size=0)
+    errorpoints = errorpoints/1000.
+    H = DLT3D(cam, real_points, errorpoints, normalization=False)
+    covar = np.cov(H)
+    conditioncov = LA.cond(covar)
+    forreproject = DLTproject(H, real_points, quant_error=False)
+    reproject = reprojection_error(imagepoints, forreproject, 6)
+    estim_R = estimate_R_withQR(H)
+    estim_center = camera_center(H)
+    estim_t = estimate_t(cam, estim_center)
+    t_error = error_t(cam, estim_t)
+    r_angle = error_R(cam, estim_R)
+    return t_error, reproject, r_angle, conditioncov   
 
 # ------------------------------------test cases------------------------------
 
