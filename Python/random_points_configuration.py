@@ -91,14 +91,15 @@ def points_config_randomtest(notest=1):
 # ------------------------------------test cases------------------------------
 
 
-cam = Camera()
+#cam = Camera()
 
 
-sph = Sphere()
+#sph = Sphere()
 
 
-cam.set_K(fx=800., fy=800., cx=640., cy=480.)
-cam.set_width_heigth(1280, 960)
-imagePoints = np.full((2, 6), 0.0)
-cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
-cam.set_t(0.0, -0.0, 0.5, frame='world')
+#cam.set_K(fx=800., fy=800., cx=640., cy=480.)
+#cam.set_width_heigth(1280, 960)
+#imagePoints = np.full((2, 6), 0.0)
+#cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
+#cam.set_t(0.0, -0.0, 0.5, frame='world')
+#bestno=points_config_randomtest(10000)
