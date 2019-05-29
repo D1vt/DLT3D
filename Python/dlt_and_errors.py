@@ -198,7 +198,42 @@ def add_noise(imagepoints, sd=4., mean=0., size=10000):
         imageNoise = np.array([[px1, px2, px3, px4, px5, px6],
                                [py1, py2, py3, py4, py5, py6]])
         return imageNoise        
-    
+ 
+ 
+ def H_DLTwithfor(worldpoints, imagepoints, numberpoints=6):
+    """
+    Extract H matrix from DLT for n number of given worldpoints
+    """
+    H = np.array([]).reshape([0, 12])
+    for i in range(numberpoints):
+        x = worldpoints[0, i]
+        y = worldpoints[1, i]
+        z = worldpoints[2, i]
+        u = imagepoints[0, i]
+        v = imagepoints[1, i]
+        row1 = np.array([x, y, z, 1., 0., 0., 0., 0., -u*x, -u*y, -u*z, -u])
+        row2 = np.array([0., 0., 0., 0., x, y, z, 1., -v*x, -v*y, -u*z, -v])
+        H = np.vstack([H, row1])
+        H = np.vstack([H, row2])
+    return H
+
+
+def matrix_condition_number_autograd(imagepoints, worldpoints, numberpoints=6):
+    """
+    Using the H matrix from DLT to get the greatest and smallest sungular
+    values
+    """
+    H = H_DLTwithfor(worldpoints, imagepoints, numberpoints, True)
+    U, s, V = np.linalg.svd(H, full_matrices=False)
+    print s
+    greatest_singular_value = s[0]
+    smallest_singular_value = s[11]
+    # print greatest_singular_value, smallest_singular_value
+    return greatest_singular_value/smallest_singular_value
+   
+def get_conditioning_number(A):
+    return np.linalg.cond(A)   
+ 
     
 # ---------- test -------------------------------------------
 cam = Camera()
