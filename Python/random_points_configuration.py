@@ -5,10 +5,43 @@ from mpl_toolkits.mplot3d import axes3d
 from vision.camera import Camera
 from python.sphere import Sphere
 from numpy import linalg as LA
+import random
+import python.dlt_and_errors as dlt
 
 
+def stand_add_noise(imagepoints, points=6):
+    imagenoise = np.full((3, points), 1.0)
+    for i in range(2000):
+        imagenoise = imagenoise + add_noise(imagepoints, sd=8., mean=2.,
+                                           )
+    imagenoise = imagenoise/2000.
+    return imagenoise
+
+def add_noise(imagepoints, sd=4., mean=0.):
+    """
+    Adding noise to each u,v of the image (random gaussian noise)
+    """
+        imagenoise = np.full((3, 6), 1.0)
+        imagenoise[0, 0] = imagepoints[0, 0] + np.random.normal(mean, sd)
+        imagenoise[1, 0] = imagepoints[1, 0] + np.random.normal(mean, sd)
+        imagenoise[0, 1] = imagepoints[0, 1] + np.random.normal(mean, sd)
+        imagenoise[1, 1] = imagepoints[1, 1] + np.random.normal(mean, sd)
+        imagenoise[0, 2] = imagepoints[0, 2] + np.random.normal(mean, sd)
+        imagenoise[1, 2] = imagepoints[1, 2] + np.random.normal(mean, sd)
+        imagenoise[0, 3] = imagepoints[0, 3] + np.random.normal(mean, sd)
+        imagenoise[1, 3] = imagepoints[1, 3] + np.random.normal(mean, sd)
+        imagenoise[0, 4] = imagepoints[0, 4] + np.random.normal(mean, sd)
+        imagenoise[1, 4] = imagepoints[1, 4] + np.random.normal(mean, sd)
+        imagenoise[0, 5] = imagepoints[0, 5] + np.random.normal(mean, sd)
+        imagenoise[1, 5] = imagepoints[1, 5] + np.random.normal(mean, sd)
+        return imagenoise
 
 def points_config_randomtest(notest=1):
+    """
+    Select the six points configuration that leads to the minimum condition number after
+    a specific number of tests (notests)
+    """
+    
     # mincondH = 1000000000.
     error = 100000000000000.
     # add same noise to each random configuration of worldpoints
@@ -31,14 +64,14 @@ def points_config_randomtest(notest=1):
         # H = DLT3D(cam, worldpoints, imagePoints, True)
         # DLTimage=DLTproject(H,worldpoints)
         imagepoints_noise = stand_add_noise(imagePoints)
-        H = DLT3D(cam, worldpoints, imagepoints_noise, False)
-        DLTimage = DLTproject(H, worldpoints)
-        # condit=LA.cond(H)
-        error_withnoise = reprojection_error(imagePoints, DLTimage, 6)
-        # if condit<error:
-        if error_withnoise < error:
-            error = error_withnoise
-            # error = condit
+        H = dlt.DLT3D(cam, worldpoints, imagepoints_noise, False)
+        DLTimage = dlt.DLTproject(H, worldpoints)
+        condit=LA.cond(H)
+        #error_withnoise = dlt.reprojection_error(imagePoints, DLTimage, 6)
+        if condit<error:
+        #if error_withnoise < error:
+            # error = error_withnoise
+            error = condit
             bestnoerror = worldpoints
             
     fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
