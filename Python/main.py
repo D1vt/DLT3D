@@ -18,6 +18,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 from mayavi import mlab
 import python.dlt_and_errors as dlt
+import python.R_t_spherical_coordinates.py as rtspherical
 mlab.clf()      
 
 
@@ -88,3 +89,14 @@ def check_valid_radius(self, number, imagepoints):
 
 # ---------------------------------------Plot the best points configuration---
 #sph.plot_sphere_and_points(sph.spherepoints)
+
+# Test case using a,b,r spherical coordinates---------------------------------
+#a, b, r = a_b_r_spherical(cam)
+#worldpoints = sph.random_points(6, 0.3)
+#covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints),
+                    #            imagePoints, a, b, r)
+#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+#r_deriv(cam, np.transpose(worldpoints), imagePoints, b, a)
+#a_angle_deriv(cam, np.transpose(worldpoints), imagePoints, b, r)
+#best_a(cam, np.transpose(worldpoints), imagePoints, b, r)
+# calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
