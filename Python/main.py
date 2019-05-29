@@ -91,12 +91,12 @@ def check_valid_radius(self, number, imagepoints):
 #sph.plot_sphere_and_points(sph.spherepoints)
 
 # Test case using a,b,r spherical coordinates---------------------------------
-#a, b, r = a_b_r_spherical(cam)
+#a, b, r = rtspherical.a_b_r_spherical(cam)
 #worldpoints = sph.random_points(6, 0.3)
-#covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints),
+#covmatrix = rtspherical.covariance_matrix_p(cam, np.transpose(worldpoints),
                     #            imagePoints, a, b, r)
-#rbest=calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
-#r_deriv(cam, np.transpose(worldpoints), imagePoints, b, a)
-#a_angle_deriv(cam, np.transpose(worldpoints), imagePoints, b, r)
-#best_a(cam, np.transpose(worldpoints), imagePoints, b, r)
-# calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
+#rtspherical.rbest=rtspherical.calculate_best_r(cam,np.transpose(worldpoints),imagePoints,b,a)
+#rtspherical.a_angle_deriv(cam, np.transpose(worldpoints), imagePoints, b, r)
+#rtsphericalbest_a(cam, np.transpose(worldpoints), imagePoints, b, r)
+# rtspherical.calculate_best_a(cam,np.transpose(worldpoints),imagePoints,b,r)
+# rtspherical.bestangledist(cam)
