@@ -91,6 +91,42 @@ def jacobian_uv(X, P, P_da, P_db, P_dc):
 return float(u_da), float(u_db), float(u_dc), float(v_da), float(v_db), float(v_dc)
 
 
+def add_noise(imagepoints, sd=4., mean=0., size=10000):
+    """
+    Adding noise to each u,v of the image (random gaussian noise)
+    """
+    if size == 0:
+        imagenoise = np.full((3, 6), 1.0)
+        imagenoise[0, 0] = imagepoints[0, 0] + np.random.normal(mean, sd)
+        imagenoise[1, 0] = imagepoints[1, 0] + np.random.normal(mean, sd)
+        imagenoise[0, 1] = imagepoints[0, 1] + np.random.normal(mean, sd)
+        imagenoise[1, 1] = imagepoints[1, 1] + np.random.normal(mean, sd)
+        imagenoise[0, 2] = imagepoints[0, 2] + np.random.normal(mean, sd)
+        imagenoise[1, 2] = imagepoints[1, 2] + np.random.normal(mean, sd)
+        imagenoise[0, 3] = imagepoints[0, 3] + np.random.normal(mean, sd)
+        imagenoise[1, 3] = imagepoints[1, 3] + np.random.normal(mean, sd)
+        imagenoise[0, 4] = imagepoints[0, 4] + np.random.normal(mean, sd)
+        imagenoise[1, 4] = imagepoints[1, 4] + np.random.normal(mean, sd)
+        imagenoise[0, 5] = imagepoints[0, 5] + np.random.normal(mean, sd)
+        imagenoise[1, 5] = imagepoints[1, 5] + np.random.normal(mean, sd)
+        return imagenoise
+    else:
+        px1 = imagepoints[0, 0] + np.random.normal(mean, sd, size)
+        py1 = imagepoints[1, 0] + np.random.normal(mean, sd, size)
+        px2 = imagepoints[0, 1] + np.random.normal(mean, sd, size)
+        py2 = imagepoints[1, 1] + np.random.normal(mean, sd, size)
+        px3 = imagepoints[0, 2] + np.random.normal(mean, sd, size)
+        py3 = imagepoints[1, 2] + np.random.normal(mean, sd, size)
+        px4 = imagepoints[0, 3] + np.random.normal(mean, sd, size)
+        py4 = imagepoints[1, 3] + np.random.normal(mean, sd, size)
+        px5 = imagepoints[0, 4] + np.random.normal(mean, sd, size)
+        py5 = imagepoints[1, 4] + np.random.normal(mean, sd, size)
+        px6 = imagepoints[0, 5] + np.random.normal(mean, sd, size)
+        py6 = imagepoints[1, 5] + np.random.normal(mean, sd, size)
+        imageNoise = np.array([[px1, px2, px3, px4, px5, px6],
+                               [py1, py2, py3, py4, py5, py6]])
+        return imageNoise     
+
 def jacobian_matrix(self, a, b, r, worldpoints):
     """
     Calculate Jacobian matrix and transpose of the Jacobian matrix.
