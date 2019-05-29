@@ -68,9 +68,9 @@ def check_valid_radius(self, number, imagepoints):
 #imagePoints = np.full((2, 6), 0.0)
 #cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
 #cam.set_t(0.0, -0.0, 0.5, frame='world')
-# worldpoints = spherepoints(6,0.3)
-# H=DLT3D(cam,worldpoints,imagePoints,True)
-# DLTimage=DLTproject(H,worldpoints)
+# worldpoints = sph.random_points(6,0.3)
+# H=dlt.DLT3D(cam,worldpoints,imagePoints,True)
+# DLTimage=dlt.DLTproject(H,worldpoints)
 
 # -Find best points, that gives the minimum error to DLT-----------------------
 #sph.spherepoints = None
