@@ -4,8 +4,13 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 import numpy as np
+import python.R_t_spherical_coordinates as rtspherical
+from vision.camera import Camera
+from python.sphere import Sphere
 
-
+"""
+Two functions for defining the confidence level and for plotting the covariance error ellipsoids
+"""
 def get_semi_axes_abc(cl):
     """
     Get a,b,c of the ellipsoid, they are half the length of the principal axes.
@@ -65,32 +70,45 @@ def plotEllipsoid(eigenvalues, center = np.transpose([0,0,0]), ax=None, plotAxes
             plt.show()
             plt.close(fig)
             del fig
+            
+#initializing
+cam = Camera()
+
+
+sph = Sphere()
+
+
+cam.set_K(fx=800., fy=800., cx=640., cy=480.)
+cam.set_width_heigth(1280, 960)
+imagePoints = np.full((2, 6), 0.0)
+cam.set_R_axisAngle(1.0,  0.0,  0.0, np.deg2rad(180.0))
+cam.set_t(0.0, -0.0, 0.5, frame='world')
 
             
 # Test case using a,b,r spherical coordinates---------------------------------
-a, b, r = a_b_r_spherical(cam)
+a, b, r = rtspherical.a_b_r_spherical(cam)
 worldpoints = sph.random_points(6, 0.3)
 #test for the first pose in front of the marker
-covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints),
+covmatrix = rtspherical.covariance_matrix_p(cam, np.transpose(worldpoints),
                                 imagePoints, a, b, r)
 eigenvalues=LA.eigvals(covmatrix)
 plotEllipsoid(eigenvalues)
 
 #test for alpha=pi/2
 a = math.pi/2
-covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints),
+covmatrix = rtspherical.covariance_matrix_p(cam, np.transpose(worldpoints),
                                 imagePoints, a, b, r)   
 eigenvalues=LA.eigvals(covmatrix)
 plotEllipsoid(eigenvalues)  
 #test for a=0
 a = 0.
-covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints),
+covmatrix = rtspherical.covariance_matrix_p(cam, np.transpose(worldpoints),
                                 imagePoints, a, b, r)   
 eigenvalues=LA.eigvals(covmatrix)
 plotEllipsoid(eigenvalues)   
 #test for a=-pi/2
 a = -math.pi/2
-covmatrix = covariance_matrix_p(cam, np.transpose(worldpoints),
+covmatrix = rtspherical.covariance_matrix_p(cam, np.transpose(worldpoints),
                                 imagePoints, a, b, r)   
 eigenvalues=LA.eigvals(covmatrix)
 plotEllipsoid(eigenvalues)             
