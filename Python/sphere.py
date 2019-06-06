@@ -76,6 +76,49 @@ class Sphere(object):
                     j = k-1
         self.sphere_points = worldpoints
         return worldpoints
+    
+    def random_prism(self, r):
+            """
+            In the thesis the distance between 2 markers is set as 10 cm = 0.1 m
+            This function creates only sets of 6 points configurations (prisms) 
+            """
+            prismpoints = np.full((4, 6), 1.0)
+            theta = random.uniform(0., math.pi)
+            phi = random.uniform(0., 2*math.pi)
+            radius = r
+            prismpoints[0, 0] = (radius*(math.sin(theta)*math.cos(phi))
+                                 + self.origin[0])
+            prismpoints[1, 0] = (radius*(math.sin(theta)*math.sin(phi))
+                                 + self.origin[1])
+            prismpoints[2, 0] = radius*(math.cos(theta))+self.origin[2]
+            prismpoints[0, 1] = prismpoints[0, 0]
+            prismpoints[1, 1] = prismpoints[1, 0]-0.10 
+            prismpoints[2, 1] = prismpoints[2, 0]
+            prismpoints[0, 2] = prismpoints[0, 0]-0.10
+            prismpoints[1, 2] = prismpoints[1, 0]
+            prismpoints[2, 2] = prismpoints[2, 0]
+            prismpoints[0, 3] = prismpoints[0, 0]-0.1
+            prismpoints[1, 3] = prismpoints[1, 0]-0.1
+            prismpoints[2, 3] = prismpoints[2, 0] +0.05
+            prismpoints[0, 4] = prismpoints[0, 0]- 0.05
+            prismpoints[1, 4] = prismpoints[1, 0] -0.1
+            prismpoints[2, 4] = prismpoints[2, 0] + 0.05
+            prismpoints[0, 5] = - prismpoints[0, 0]- 0.05
+            prismpoints[1, 5] = - prismpoints[1, 0] -0.1
+            prismpoints[2, 5] = prismpoints[2, 0] + 0.05
+            """
+            the below comments are needed if we want to plot the prism
+            """
+            #fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+            #ax.scatter(prismpoints[:3, 0], prismpoints[:3, 1],
+             #          prismpoints[:3, 2], s=80, c='r')
+            #ax.scatter(prismpoints[:3, 3],prismpoints[:3, 4], prismpoints[:3, 5],
+             #          s=80, c='r')
+            #ax.set_xlabel('x label')
+            #ax.set_ylabel('y label')
+            #ax.set_zlabel('z label')
+            #plt.show()  
+            return prismpoints
 
     def set_origin(self, origin):
         self.origin = origin
