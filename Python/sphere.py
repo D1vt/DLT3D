@@ -36,20 +36,25 @@ class Sphere(object):
         new_sphere.type = self.type
         return new_sphere
 
-    def random_points(self, p=6, r=3, min_dist=0.01):
+     def random_points(self, p=6, r=0.3, min_dist=0.016, periphery=False):
         """
         p: ammount of points on sphere
         r: radius of sphere in meters
         min_dist: minimum distance between each point
+        periphery: True = all the tandomly selected points are belonging to the periphery of the sphere
+                   False = the points are randomly selected from the sphere plane
         """
         worldpoints = np.full((4, p), 1.0)
         self.radius = r
         for k in range(0, p):
             theta = random.uniform(0., math.pi)
             phi = random.uniform(0., 2*math.pi)
-            radius = random.uniform(0, r)
-            while(radius == 0):
+            if (periphery):
+                radius = r
+            else:
                 radius = random.uniform(0, r)
+                while(radius == 0):
+                    radius = random.uniform(0, r)
             worldpoints[0, k] = (radius*(math.sin(theta)*math.cos(phi))
                                  + self.origin[0])
             worldpoints[1, k] = (radius*(math.sin(theta)*math.sin(phi))
@@ -68,6 +73,7 @@ class Sphere(object):
                     theta = random.uniform(0., math.pi)
                     phi = random.uniform(0., 2*math.pi)
                     radius = random.uniform(0, r)
+                    # radius = r
                     while(radius == 0):
                         radius = random.uniform(0, r)
                     worldpoints[0, k] = radius*(math.sin(theta)*math.cos(phi))
