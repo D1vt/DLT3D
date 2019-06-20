@@ -1,0 +1,16 @@
+# DLT3D
+
+\begin{itemize}
+\item Sphere: A class that creates a Sphere is developed and it can be found by following this path:  \texttt{/D1vt/DLT3D/Python/sphere.py}
+\item \acrshort{dlt} and errors: The \acrshort{dlt} algorithm for \acrshort{3d} cases and the functions to extract the final \^{R}, \^{t} and the Camera center can be found here. In addition, all the functions to calculate the \acrshort{rms} Error, \acrshort{re}, \acrshort{te} and reprojection errors, with the equations that presented in Chapter 3, are available following: \texttt{/D1vt/DLT3D/Python/dlt\_and\_errors.py}. Two different functions for the \acrshort{dlt} can be found here. The first one is \texttt{def DLT3D} and it has as an input exactly 6 world points and their projected image points. The second one, \texttt{def H\_DLTwithfor}, can have as input any N number of points ($N>=6$). The reason we create two different functions, is that the first one is faster, when we need to solve the \acrshort{dlt} only for 6 points, as we do not use any for command in the function, that increase the code's time complexity. 
+\item $R_{\text{Euler}}$: A function, which creates the Rotation matrix, mentioned in equation \eqref{eq:eul} based on Euler angles. Available: 
+\texttt{/D1vt/DLT3D/Python/R\_From\_EulerAngles.py}
+\item \acrlong{3d} Plotting: The code for \acrshort{3d} plotting using mayavi is available following this path: \texttt{D1vt/DLT3D/Python/3DplotSphere.py}
+\item Gradient Descent: The algorithm we develop for the Gradient Descent Optimization, for 100 iterations, and for the superSAB algorithm can be found here: \texttt{D1vt/DLT3D/Python/gradient\_3dpoints.py}
+\item Adam optimization: As mentioned we use an already developed python algorithm for the Adam optimization. However, some modifications were required to use the algorithm in our \acrshort{3d} optimization case. Thus, our code is available here: \texttt{D1vt/DLT3D/Python/adam3dpoints.py}
+\item Rotation and Translation Matrices expressed in spherical coordinates: All the equations that were presented in Chapter 4, about the \textbf{$R_{\text{spherical}}$}, \textbf{$t_{\text{spherical}}$}, the Jacobian matrix $J_p$ and the covariance matrix $\Sigma_{\alpha, \beta, r}$ are developed here: \texttt{D1vt/DLT3D/Python/R\_t\_spherical\_coordinates.py}
+\item Random Points Selection Algorithm: The algorithm that selects random points and always keep the configuration that leads to minimum condition number is available here: \texttt{D1vt/DLT3D/Python/random\_points\_configuration.py} 
+\item Plot Error Covariance Ellipsoids: The algorithm that takes as an input a certain confidence level and the covariance matrix and plots the ellipsoids. In this algorithm the $\alpha$, $\beta$ and r for the ellipsoid must be defined. It is available here: \texttt{D1vt/DLT3D/Python/plotellipsoid.py}
+\item Main function: Testcases for all the above functions can be found here, as well as, a function that validate whether the projected points of some world-points are projected inside the image plane or not. This function is used so that we can choose a valid radius in our sphere class, that enables all the world points to be well captured and presented in the image plane. It can be found here: \texttt{D1vt/DLT3D/Python/main.py} 
+\end{itemize}
+
